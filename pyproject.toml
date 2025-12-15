@@ -6,15 +6,28 @@ requires = ["setuptools>=69.0,<75", "wheel>=0.45.1"]
 name = "kairos-asr"
 dynamic = ["version"]
 description = "High-performance Russian speech recognition library based on GigaAM-style RNN-T and ONNX."
-readme = "README.md"
+readme = "docs/README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{name = "Alexey Shimokhin / Alenkar"}]
 keywords = ["asr", "speech-recognition", "russian", "onnx", "rnnt", "gigaam", "rnnt-asr"]
 classifiers = [
+    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
-    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Human Machine Interfaces",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Topic :: Text Processing :: Linguistic",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
     "huggingface_hub>=1.2.3",

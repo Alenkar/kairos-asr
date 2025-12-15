@@ -39,7 +39,6 @@ class KairosDecoder:
         self.decoder = ONNXModel(decoder_path, device=device)
         self.joint = ONNXModel(joint_path, device=device)
 
-        # Определяем размер скрытого состояния декодера
         for inp in self.decoder.session.get_inputs():
             if len(inp.shape) == 3:
                 self.num_layers, _, self.hidden_size = inp.shape
