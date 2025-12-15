@@ -59,7 +59,6 @@ class KairosEncoder:
         wav = prepare_audio_tensor(segment)
         features = self.feature_extractor(wav)
 
-        # Защита от пустых сегментов
         if features.shape[-1] == 0:
             return None, None
 

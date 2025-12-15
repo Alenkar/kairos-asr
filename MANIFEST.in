@@ -1,4 +1,3 @@
-include README.md
 include LICENSE
+include docs/README.md
 include docs/THIRD_PARTY_LICENSES.md
-include assets/logo.png
