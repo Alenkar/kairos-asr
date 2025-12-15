@@ -1,0 +1,7 @@
+/test_data/*.wav
+/dist
+/kairos_asr.egg-info
+.idea
+/train
+/docs/README.hf.md
+__pycache__/

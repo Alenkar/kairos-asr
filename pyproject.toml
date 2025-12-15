@@ -1,0 +1,50 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=69.0,<75", "wheel>=0.45.1"]
+
+[project]
+name = "kairos-asr"
+dynamic = ["version"]
+description = "High-performance Russian speech recognition library based on GigaAM-style RNN-T and ONNX."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{name = "Alexey Shimokhin / Alenkar"}]
+keywords = ["asr", "speech-recognition", "russian", "onnx", "rnnt", "gigaam", "rnnt-asr"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "huggingface_hub>=1.2.3",
+    "numpy>=1.23.5",
+    "torch>=2.6.0",
+    "torchaudio>=2.6.0",
+    "sentencepiece>=0.2.1",
+    "scipy>=1.15.3",
+    "onnxruntime>=1.19.2"
+]
+
+[project.optional-dependencies]
+gpu = ["onnxruntime-gpu>=1.19.2"]
+realtime = ["sounddevice>=0.4.6"]
+all = [
+    "sounddevice>=0.4.6",
+    "onnxruntime-gpu>=1.19.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/Alenkar/kairos-asr"
+Repository = "https://github.com/Alenkar/kairos-asr"
+Issues = "https://github.com/Alenkar/kairos-asr/issues"
+
+[project.scripts]
+kairos-asr = "kairos_asr.core.cli:main"
+
+[tool.setuptools]
+packages = { find = { where = ["."], include = ["kairos_asr", "kairos_asr.*"] } }
+license-files = ["LICENSE", "docs/THIRD_PARTY_LICENSES.md"]
+
+[tool.setuptools.dynamic]
+version = {attr = "kairos_asr._version.__version__"}
