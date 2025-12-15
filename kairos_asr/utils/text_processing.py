@@ -5,14 +5,6 @@ from ..core.data_classes import dtypes
 
 logger = logging.getLogger(__name__)
 
-# def clean_text_content(text: str) -> str:
-#     """
-#     Удаляет лишние символы (например, жирное тире) и нормализует пробелы.
-#     """
-#     # Удаляем длинное тире и лишние пробелы
-#     cleaned = text.replace("—", "").replace("  ", " ").strip()
-#     return cleaned
-
 
 def clean_and_validate_word(text: str) -> str | None:
     """
