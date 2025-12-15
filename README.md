@@ -4,7 +4,6 @@
 
 [![PyPI](https://img.shields.io/pypi/v/kairos-asr)](https://pypi.org/project/kairos-asr/)
 [![Python](https://img.shields.io/pypi/pyversions/kairos-asr)](https://pypi.org/project/kairos-asr/)
-[![Downloads](https://img.shields.io/pypi/dm/kairos-asr)](https://pypi.org/project/kairos-asr/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Hugging Face](https://img.shields.io/badge/HuggingFace-KairosASR-yellow?logo=huggingface)](https://huggingface.co/Alenkar/KairosASR)
 
