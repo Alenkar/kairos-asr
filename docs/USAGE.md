@@ -136,8 +136,7 @@ kairos-asr transcribe path/to/audio.wav
 ```
 
 Команды:
-- `kairos-asr info` — базовая информация о пакете и путях к весам (если найдены).
-- `kairos-asr doctor` — проверка окружения (Python, Torch, CUDA, model_path).
+- `kairos-asr doctor` — проверка окружения (Python, Torch, CUDA, Onnxruntime, Models dir).
 - `kairos-asr list` — показывает локальное наличие весов и пути.
 - `kairos-asr download [model]` — скачивает все веса или только указанные (`all|encoder|decoder|joint|tokenizer`).
 - `kairos-asr transcribe <wav_file>` — транскрипция файла.
