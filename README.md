@@ -27,7 +27,7 @@
 - Простая установка и использование
 - Поддержка **Windows** и **Linux**
 ## ⚡ TL;DR
-- `pip install kairos-asr`
+- `pip install kairos-asr[gpu]`
 - Запустить: `kairos-asr transcribe example.wav` или см. Python сниппет ниже.
 - Полное руководство: `docs/USAGE.md`.
 
@@ -43,35 +43,20 @@
 ### Быстрый старт (CPU)
 
 ```bash
-pip install kairos-asr
+pip install kairos-asr[cpu]
 ```
-
-<details>
-<summary>Другие способы установки</summary>
-
-### Через GIT
-
-```bash
-pip install git+https://github.com/Alenkar/kairos-asr.git
-# или
-git clone https://github.com/Alenkar/kairos-asr.git
-cd kairos-asr
-pip install -e .
-```
-</details>
 
 ### Поддержка GPU (CUDA)
 
 1) Пакет с GPU-опциями:
 ```bash
-pip install "kairos-asr[gpu]"
+pip install kairos-asr[gpu]
 ```
 
 2) Torch/Torchaudio под вашу версию CUDA:
 ```bash
 # пример под CUDA 12.1/12.2 (cu121)
-pip install torch==2.6.0 torchaudio==2.6.0 \
-  --index-url https://download.pytorch.org/whl/cu121 --upgrade
+pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121 --upgrade
 ```
 Найдите свой индекс (cu118, cu121 и т.д.) на pytorch.org и подставьте в команду.
 
@@ -90,8 +75,6 @@ print(result.full_text)
 - Файлы, поддерживаемые `ffmpeg`; автоматический ресемплинг до 16 kHz.
 - Рекомендуется WAV PCM 16-bit, mono, 16 kHz; стерео приводится к моно.
 - Длинные записи режутся Silero VAD на ~15–25 c (жёсткий лимит ~30 c) и объединяются.
-
-
 
 ## Использование (CLI)
 Существует несколько команд для работы через терминал.
