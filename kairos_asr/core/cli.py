@@ -57,7 +57,7 @@ def doctor_command(args: argparse.Namespace) -> int:
         report["checks"]["onnxruntime"] = {"error": str(e)}
         report["status"] = "error"
 
-    models_dir = downloader.get_models_dir()
+    models_dir = downloader.get_storage_dir()
     report["checks"]["models_dir"] = {
         "path": str(models_dir),
         "exists": models_dir.exists(),
@@ -67,7 +67,7 @@ def doctor_command(args: argparse.Namespace) -> int:
     model_files = downloader.model_files
     models_info = []
     for name in model_files:
-        path = downloader.get_model_path(name)
+        path = downloader.check_local_file(name)
         exists_local = path is not None
         models_info.append(
             {
@@ -108,7 +108,6 @@ def download_command(args: argparse.Namespace) -> int:
 
     downloader = ModelDownloader()
 
-    # Фиксированные модели
     all_models = list(downloader.model_files.keys())
     targets = all_models if args.model == "all" else [args.model]
 
@@ -120,7 +119,7 @@ def download_command(args: argparse.Namespace) -> int:
 
     for model_name in targets:
         try:
-            path = downloader.download_model(model_name, force_download=args.force)
+            path = downloader.download_file(model_name, force_download=args.force)
             results[model_name] = {"status": "success", "path": str(path)}
             if args.format == "text":
                 print(f"✅ {model_name}")
@@ -143,7 +142,7 @@ def list_command(args: argparse.Namespace) -> int:
     model_files = downloader.model_files
     result = []
     for name in model_files:
-        path = downloader.get_model_path(name)
+        path = downloader.check_local_file(name)
         exists_local = path is not None
         result.append(
             {

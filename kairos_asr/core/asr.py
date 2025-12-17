@@ -21,85 +21,82 @@ logger = logging.getLogger(__name__)
 
 class KairosASR:
     """
-    Модель автоматического распознавания речи на базе Gigaam.
+    Automatic speech recognition model based on Gigaam.
     """
     def __init__(
         self,
-        encoder_path: Optional[str] = None,
-        decoder_path: Optional[str] = None,
-        joint_path: Optional[str] = None,
-        tokenizer_path: Optional[str] = None,
+        model_path: Optional[str] = None,
         device: str = "cuda",
         force_download: bool = False
     ):
         """
-        Инициализирует ASR-модель с опциональными путями к весам.
+        Initializes the ASR model with optional paths to weights.
 
-        :param encoder_path: Путь к encoder.onnx (если None, будет скачан автоматически, если его нет).
-        :param decoder_path: Путь к decoder.onnx (если None, будет скачан автоматически, если его нет).
-        :param joint_path: Путь к joint.onnx (если None, будет скачан автоматически, если его нет).
-        :param tokenizer_path: Путь к tokenizer.model (если None, будет скачан автоматически, если его нет).
-        :param device: Устройство ('cuda', 'cuda:0' или 'cpu').
-        :param force_download: Принудительно скачивать модели и перезаписывать.
+        :param model_path: Custom path to *.onnx files.
+                           If empty inside, files will be downloaded automatically.
+        :param device: Device ('cuda', 'cuda:0' or 'cpu').
+        :param force_download: Force download models and overwrite.
         """
-        logger.debug("Initialization: KairosASR")
+        logger.debug("Starting initialization of KairosASR")
 
         self.sample_rate = 16000
         self.dtype = torch.float32
         self.max_letters_per_frame = 10
         self.device = check_device(device)
+        logger.debug(f"Device checked and set to: {self.device}")
 
-        model_paths = {
-            "encoder": encoder_path,
-            "decoder": decoder_path,
-            "joint": joint_path,
-            "tokenizer": tokenizer_path,
-        }
+        model_downloader = ModelDownloader(model_path=model_path)
+        resolved_paths = model_downloader.resolve_models_path(force_download=force_download)
+        logger.debug("Model paths resolved")
 
-        model_downloader = ModelDownloader()
-        resolved_paths = model_downloader.resolve_models_path(
-            model_paths=model_paths,
-            force_download=force_download,
-        )
-
-        # Дополнительный класс для расчета оставшегося времени
         self.calculated_remaining_time = CalculatedRemainingTime()
+        logger.debug("CalculatedRemainingTime initialized")
 
-        # Сегментатор Silero
         self.silero_vad = SileroVAD(device=device)
+        logger.debug("SileroVAD initialized")
 
-        # Токенизатор
         self.tokenizer = spm.SentencePieceProcessor()
-        self.tokenizer.Load(model_file=resolved_paths["tokenizer"])
+        tokenizer_path = resolved_paths["tokenizer"]
+        logger.debug(f"Loading tokenizer from: {tokenizer_path}")
+        self.tokenizer.Load(model_file=tokenizer_path)
         blank_id = self.tokenizer.GetPieceSize()
+        logger.debug(f"Tokenizer loaded, blank_id: {blank_id}")
 
-        # Encoder и Decoder
         self.encoder = KairosEncoder(
             encoder_path=resolved_paths["encoder"], device=device
         )
+        logger.debug("KairosEncoder initialized")
+
         self.decoder = KairosDecoder(
             decoder_path=resolved_paths["decoder"], joint_path=resolved_paths["joint"],
             blank_id=blank_id, device=device
         )
-        logger.debug(f"KairosASR initialized on device: {self.device}")
+        logger.debug("KairosDecoder initialized")
+
+        logger.info(f"KairosASR fully initialized on device: {self.device}")
 
     def _process_segment(self, segment: torch.Tensor, offset: float = 0.0) -> List[dtypes.word]:
         """
-        Обработка сегмента: извлекает слова с точными timestamps.
+        Processes a segment: extracts words with precise timestamps.
         :param segment:
         :param offset:
         :return:
         """
-        logger.debug(f"Process segment")
+        logger.debug(f"Processing segment with offset: {offset}")
 
         enc_features, frame_duration = self.encoder.encode_segment(segment)
         if enc_features is None:
+            logger.warning("Encoder returned None features for segment")
             return []
 
         token_ids, token_frames = self.decoder.decode_segment(enc_features)
+        logger.debug(f"Decoded {len(token_ids)} tokens")
 
         pieces = [self.tokenizer.IdToPiece(tid) for tid in token_ids]
-        return extract_words_from_tokens(pieces, token_frames, frame_duration, offset)
+        words = extract_words_from_tokens(pieces, token_frames, frame_duration, offset)
+        logger.debug(f"Extracted {len(words)} words from tokens")
+
+        return words
 
     def transcribe(
             self,
@@ -108,34 +105,36 @@ class KairosASR:
             **vad_kwargs,
     ) -> dtypes.tts_result:
         """
-        Основная функция для файла. Возвращает полную структуру данных.
-        1. Полный текст (чистый).
-        2. Слова с timestamps.
-        3. Предложения с timestamps.
+        Main function for file. Returns full data structure.
+        1. Full text (clean).
+        2. Words with timestamps.
+        3. Sentences with timestamps.
 
-        :param wav_file: Путь к файлу
+        :param wav_file: Path to file
         :param pause_threshold:
 
         :return:
         """
-        logger.debug(f"Audio transcription: start")
+        logger.info(f"Starting audio transcription for file: {wav_file}")
 
-        # ToDo change wav_file to data numpy ( str | ndarray)
         segments, boundaries = self.silero_vad.segment_audio_file(
             wav_file, sr=self.sample_rate, **vad_kwargs
         )
+        logger.debug(f"Segmented audio into {len(segments)} segments")
 
         all_words: List[dtypes.word] = []
 
         for segment, (start_offset, _) in zip(segments, boundaries):
             segment_words = self._process_segment(segment, offset=start_offset)
             all_words.extend(segment_words)
+            logger.debug(f"Processed segment, added {len(segment_words)} words")
 
         sentences_objs = extract_sentences_from_words(all_words, pause_threshold=pause_threshold)
+        logger.debug(f"Extracted {len(sentences_objs)} sentences")
 
         full_text_str = " ".join([s.text for s in sentences_objs])
 
-        logger.debug(f"Audio transcription : complete")
+        logger.info("Audio transcription completed")
 
         return dtypes.tts_result(
             full_text=full_text_str,
@@ -152,43 +151,52 @@ class KairosASR:
             **vad_kwargs
     ) -> Generator[dtypes.word | dtypes.sentence | Tuple[dtypes.word | dtypes.sentence, Dict[str, float]], None, None]:
         """
-        Генератор для потокового вывода.
-        :param wav_file: Путь к аудиофайлу.
-        :param return_sentences: Если True, собирает слова в предложения и выводит экземпляры Sentence.
-        :param with_progress: Если True, yield (объект Word/Sentence, progress_dict),
-            где progress = {'percent': float, 'segment': int, 'total_segments': int}.
-        :param pause_threshold: Порог паузы для формирования предложений (в секундах).
-        :param vad_kwargs: Параметры VAD.
-        :return: Экземпляр Word или Sentence (или кортеж с progress, если with_progress=True).
+        Generator for streaming output.
+        :param wav_file: Path to audio file.
+        :param return_sentences: If True, collects words into sentences and yields Sentence instances.
+        :param with_progress: If True, yields (Word/Sentence object, progress_dict),
+            where progress = {'percent': float, 'segment': int, 'total_segments': int}.
+        :param pause_threshold: Pause threshold for forming sentences (in seconds).
+        :param vad_kwargs: VAD parameters.
+        :return: Word or Sentence instance (or tuple with progress if with_progress=True).
         """
-        logger.debug(f"Audio transcription (Yield) : start")
+        logger.info(f"Starting iterative audio transcription for file: {wav_file} (return_sentences={return_sentences}, with_progress={with_progress})")
+
         segments, boundaries = self.silero_vad.segment_audio_file(
             wav_file, sr=self.sample_rate, **vad_kwargs
         )
+        logger.debug(f"Segmented audio into {len(segments)} segments")
 
         total_segments = len(segments)
         total_audio_duration = sum(segment.shape[0] for segment in segments) / self.sample_rate
+        logger.debug(f"Total audio duration: {total_audio_duration} seconds")
 
         current_segment = 0
         buffer_words: List[dtypes.word] = []
         estimated_remaining_time = 0.0
         if with_progress:
-           self.calculated_remaining_time.load_info(self.sample_rate, total_audio_duration)
+            self.calculated_remaining_time.load_info(self.sample_rate, total_audio_duration)
+            logger.debug("Progress calculation initialized")
 
         for segment, (start_offset, _) in zip(segments, boundaries):
             current_segment += 1
+            logger.debug(f"Processing segment {current_segment}/{total_segments}")
 
             if with_progress:
                 estimated_remaining_time = self.calculated_remaining_time.step()
+                logger.debug(f"Estimated remaining time after step: {estimated_remaining_time}")
 
             segment_words = self._process_segment(segment, offset=start_offset)
 
             if with_progress:
                 estimated_remaining_time = self.calculated_remaining_time.calc(segment.shape[0])
+                logger.debug(f"Estimated remaining time after calc: {estimated_remaining_time}")
 
             if return_sentences:
                 buffer_words.extend(segment_words)
                 sentences = extract_sentences_from_words(buffer_words, pause_threshold=pause_threshold)
+                logger.debug(f"Extracted {len(sentences)} sentences from buffer")
+
                 for sent in sentences[:-1] if sentences else []:
                     if with_progress:
                         progress = dtypes.progres(
@@ -203,6 +211,7 @@ class KairosASR:
                 if sentences:
                     last_sent_words = len(sentences[-1].text.split())
                     buffer_words = buffer_words[-last_sent_words:] if len(sentences) > 1 else buffer_words
+                    logger.debug(f"Updated buffer_words to last {len(buffer_words)} words")
             else:
                 for word in segment_words:
                     if with_progress:
@@ -215,9 +224,10 @@ class KairosASR:
                         yield word, progress
                     else:
                         yield word
+
         if return_sentences and buffer_words:
-            logger.debug(f"Audio transcription (Yield) : complete")
             remaining_sentences = extract_sentences_from_words(buffer_words, pause_threshold=pause_threshold)
+            logger.debug(f"Processing remaining {len(remaining_sentences)} sentences")
             for sent in remaining_sentences:
                 if with_progress:
                     progress = dtypes.progres(
@@ -229,5 +239,5 @@ class KairosASR:
                     yield sent, progress
                 else:
                     yield sent
-        else:
-            logger.debug(f"Audio transcription (Yield) : complete")
+
+        logger.info("Iterative audio transcription completed")
