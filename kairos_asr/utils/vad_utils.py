@@ -6,36 +6,31 @@ from typing import List, Tuple
 from ..utils.device_utils import check_device
 from ..utils.audio_utils import load_audio
 
+from silero_vad import (
+    load_silero_vad, get_speech_timestamps, _, _, _, _)
+
 logger = logging.getLogger(__name__)
 
 class SileroVAD:
     def __init__(self, device: str='cuda'):
         """
-
+        SileroVAD для разбиения длинного аудио на сегменты.
         :param device:
         """
         logger.debug("Initialization: SileroVAD")
 
         self.device = check_device(device)
-        self.silero_model, silero_utils = self.get_silero_model()
-        logger.debug(f"Model Silero loaded : {self.device}")
-
-        (self.get_speech_timestamps, save_audio, read_audio, VADIterator, collect_chunks) = silero_utils
-        logger.debug(f"Utils Silero loaded")
+        self.silero_model = self.get_silero_model()
+        logger.info(f"Model SileroVAD loaded : {self.device}")
 
     def get_silero_model(self):
         """
         Загружает модель Silero VAD и необходимые утилиты.
-        Использует torch.hub для загрузки последней версии (v5/v6).
+        Использует pip-пакет silero-vad для фиксированной версии.
         """
-        # ToDo зафиксировать версию для дальнейшего использования
-        silero_model, silero_utils = torch.hub.load(
-            repo_or_dir='snakers4/silero-vad',
-            model='silero_vad',
-            onnx=False,
-            verbose=False
-        )
-        return silero_model.to(self.device), silero_utils
+        model = load_silero_vad()
+        model = model.to(self.device)
+        return model
 
     @staticmethod
     def preprocessing(audio: torch.Tensor) -> torch.Tensor:
@@ -107,7 +102,7 @@ class SileroVAD:
         audio = load_audio(wav_file)
         audio_for_vad = self.preprocessing(audio)
 
-        speech_timestamps_samples = self.get_speech_timestamps(
+        speech_timestamps_samples = get_speech_timestamps(
             audio_for_vad.to(self.device),
             self.silero_model,
             sampling_rate=sr,
