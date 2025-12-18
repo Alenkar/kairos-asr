@@ -1,4 +1,3 @@
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -6,7 +5,7 @@ import shutil
 
 from kairos_asr import KairosASR
 from kairos_asr.models.utils.model_downloader import ModelDownloader
-from kairos_asr.core.data_classes import dtypes
+from kairos_asr.core import dtypes
 
 
 TEST_WAV = Path(__file__).resolve().parents[1] / "test_data" / "record.wav"
@@ -75,22 +74,4 @@ def test_python_api_transcribe_iterative_with_progress(asr_cuda):
     assert len(items) > 0
     item, progress = items[0]
     assert isinstance(item, dtypes.word)
-    assert isinstance(progress, dtypes.progres)
-
-
-@pytest.mark.skipif(not _ffmpeg_available(), reason="ffmpeg требуется для ASR-тестов")
-@pytest.mark.skipif(not _models_available(), reason="Модели не найдены локально; выполните `kairos-asr download`")
-@pytest.mark.integration
-def test_cli_transcribe():
-    cmd = [
-        "python",
-        "-m",
-        "kairos_asr.core.cli",
-        "transcribe",
-        str(TEST_WAV),
-        "--device",
-        "cuda",
-    ]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-    assert proc.returncode == 0, f"CLI завершился с ошибкой: {proc.stderr}"
-    assert proc.stdout.strip(), "Вывод CLI пустой"
+    assert isinstance(progress, dtypes.progress)

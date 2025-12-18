@@ -1,8 +1,7 @@
-import os
 from pathlib import Path
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from huggingface_hub.errors import LocalEntryNotFoundError
 from kairos_asr.models.utils.model_downloader import ModelDownloader
@@ -45,40 +44,31 @@ def test_get_storage_dir_custom():
     assert downloader.get_storage_dir() == Path(custom_path).absolute()
 
 
-@patch("kairos_asr.models.utils.model_downloader.Path")
-def test_check_local_file_custom_exists(mock_path):
-    custom_path = "/tmp/models"
-    expected_path = os.path.normpath("/tmp/models/kairos_asr_encoder.onnx")
-    downloader = ModelDownloader(model_path=custom_path)
+def test_check_local_file_custom_exists(tmp_path):
+    custom_path = tmp_path / "models"
+    custom_path.mkdir()
+    file_name = "kairos_asr_encoder.onnx"
+    file_path = custom_path / file_name
+    file_path.touch()  # Создаём пустой файл
 
-    mock_target_path = MagicMock()
-    mock_target_path.exists.return_value = True
-    mock_target_path.absolute.return_value = Path("/tmp/models/kairos_asr_encoder.onnx")
-    # ToDo переделать __truediv__
-    mock_path.return_value.__truediv__.return_value = mock_target_path
-
+    downloader = ModelDownloader(model_path=str(custom_path))
     result = downloader.check_local_file("encoder")
-    assert result == expected_path
+    assert result == str(file_path.absolute())
 
 
-def test_check_local_file_custom_not_exists():
-    custom_path = "/tmp/models"
+def test_check_local_file_custom_not_exists(tmp_path):
+    custom_path = tmp_path / "models"
+    custom_path.mkdir()
 
-    downloader = ModelDownloader(model_path=custom_path)
+    downloader = ModelDownloader(model_path=str(custom_path))
     result = downloader.check_local_file("encoder")
-
     assert result is None
 
 
 @patch("kairos_asr.models.utils.model_downloader.hf_hub_download")
-@patch("kairos_asr.models.utils.model_downloader.Path")
-def test_check_local_file_default_exists(mock_path, mock_hf_download):
+def test_check_local_file_default_exists(mock_hf_download):
     downloader = ModelDownloader()
     mock_hf_download.return_value = "/cache/path/model.onnx"
-
-    mock_abs_path = MagicMock()
-    mock_abs_path.absolute.return_value = "/cache/path/model.onnx"
-    mock_path.return_value = mock_abs_path
 
     result = downloader.check_local_file("encoder")
     assert result == "/cache/path/model.onnx"
@@ -103,14 +93,9 @@ def test_check_local_file_invalid_key():
 
 
 @patch("kairos_asr.models.utils.model_downloader.hf_hub_download")
-@patch("kairos_asr.models.utils.model_downloader.Path")
-def test_download_file(mock_path, mock_hf_download):
+def test_download_file(mock_hf_download):
     downloader = ModelDownloader()
     mock_hf_download.return_value = "/downloaded/path/model.onnx"
-
-    mock_abs_path = MagicMock()
-    mock_abs_path.absolute.return_value = "/downloaded/path/model.onnx"
-    mock_path.return_value = mock_abs_path
 
     result = downloader.download_file("encoder")
     assert result == "/downloaded/path/model.onnx"
@@ -146,12 +131,12 @@ def test_download_all(mock_download_file):
 
 @patch("kairos_asr.models.utils.model_downloader.ModelDownloader.check_local_file")
 @patch("kairos_asr.models.utils.model_downloader.ModelDownloader.download_file")
-def test_get_all_paths_download_if_missing(mock_download_file, mock_check_local_file):
+def test_resolve_models_path(mock_download_file, mock_check_local_file):
     downloader = ModelDownloader()
     mock_check_local_file.side_effect = [None, "/path/decoder", None, "/path/tokenizer"]
     mock_download_file.side_effect = ["/path/encoder", "/path/joint"]
 
-    result = downloader.get_all_paths()
+    result = downloader.resolve_models_path()
     assert len(result) == 4
     assert result["encoder"] == "/path/encoder"
     assert result["decoder"] == "/path/decoder"
