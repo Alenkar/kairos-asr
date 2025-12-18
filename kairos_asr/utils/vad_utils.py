@@ -6,8 +6,7 @@ from typing import List, Tuple
 from ..utils.device_utils import check_device
 from ..utils.audio_utils import load_audio
 
-from silero_vad import (
-    load_silero_vad, get_speech_timestamps, _, _, _, _)
+from silero_vad import load_silero_vad, get_speech_timestamps
 
 logger = logging.getLogger(__name__)
 
