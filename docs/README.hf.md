@@ -1,4 +1,8 @@
- # Kairos Automatic Speech Recognition
+ ![image](assets/logo.png)
+ 
+ # Kairos Automatic Speech Recognition (Hugging Face)
+ 
+ [GitHub: Alenkar/kairos-asr](https://github.com/Alenkar/kairos-asr)
 
 ## 📄 Описание
 
@@ -13,6 +17,23 @@
 - Поддержка длинных аудио
 - Поддержка **Windows** и **Linux**
 
+## 📦 Файлы в этом репозитории HF
+
+Модельный репозиторий `Alenkar/KairosASR` содержит:
+- `kairos_asr_encoder.onnx`
+- `kairos_asr_decoder.onnx`
+- `kairos_asr_joint.onnx`
+- `kairos_asr_tokenizer.model`
+
+`kairos-asr` загружает эти файлы через `huggingface_hub` автоматически. Можно скачать вручную:
+
+```python
+from huggingface_hub import hf_hub_download
+
+path = hf_hub_download("Alenkar/KairosASR", "kairos_asr_encoder.onnx")
+print(path)
+```
+
 ## ⚡ Быстрый старт
 
 ```bash
@@ -24,7 +45,8 @@ pip install kairos-asr[cpu]
 
 ```bash
 # пример под CUDA 12.1/12.2 (cu121)
-pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121 --upgrade
+pip install torch==2.6.0 torchaudio==2.6.0 \
+  --index-url https://download.pytorch.org/whl/cu121 --upgrade
 ```
 
 ## 🚀 Использование (Python)
@@ -65,3 +87,7 @@ kairos-asr transcribe <wav_file>
 ## ⚙️ Системные требования
 - `ffmpeg` должен быть доступен в `PATH` (загрузка и ресемплинг аудио).
 - Доступ в интернет при первом запуске: скачивание весов моделей. Для ускорения и избежания лимитов задайте `HF_TOKEN` (`huggingface-cli login` или экспорт переменной окружения).
+
+## Больше информации
+
+Для получения дополнительной информации об исходной модели смотрите ее [карточку модели](https://huggingface.co/ai-sage/GigaAM-v3).

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Dict#, Type
 
 
 @dataclass
@@ -12,7 +12,7 @@ class Progress:
     total_segments: int
     time_remaining: float
 
-    def to_dict(self):
+    def to_dict(self) -> Dict:
         return {
             "percent": self.percent,
             "segment": self.segment,
@@ -29,7 +29,7 @@ class Word:
     start: float
     end: float
 
-    def to_dict(self):
+    def to_dict(self) -> Dict:
         return {"text": self.text, "start": self.start, "end": self.end}
 
 
@@ -42,7 +42,7 @@ class Sentence:
     start: float
     end: float
 
-    def to_dict(self):
+    def to_dict(self) -> Dict:
         return {"text": self.text, "start": self.start, "end": self.end}
 
 
@@ -56,22 +56,26 @@ class TranscriptionResult:
     sentences: List[Sentence]
 
 
-class DataTypes:
-    @property
-    def word(self):
-        return Word
+# class DataTypes:
+#
+#     @property
+#     def word(self) -> Type[Word]:
+#         return Word
+#
+#     @property
+#     def sentence(self) -> Type[Sentence]:
+#         return Sentence
+#
+#     @property
+#     def tts_result(self) -> Type[TranscriptionResult]:
+#         return TranscriptionResult
+#
+#     @property
+#     def progress(self) -> Type[Progress]:
+#         return Progress
 
-    @property
-    def sentence(self):
-        return Sentence
 
-    @property
-    def tts_result(self):
-        return TranscriptionResult
-
-    @property
-    def progres(self):
-        return Progress
-
-
-dtypes = DataTypes()
+word = Word
+sentence = Sentence
+tts_result = TranscriptionResult
+progress = Progress

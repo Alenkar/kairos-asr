@@ -14,6 +14,7 @@ class ONNXModel:
         ):
         """
         Обертка для ONNX моделей.
+
         :param model_path: Путь к файлу или имя модели из реестра
         :param device: 'cuda' или 'cpu'
         """
@@ -38,31 +39,35 @@ class ONNXModel:
     def run(self, output_names, input_dict):
         """
         Запуск inference.
-        :param output_names:
-        :param input_dict:
-        :return:
+
+        :param output_names: Имена выходных узлов или None.
+        :param input_dict: Словарь входных данных.
+        :return: Список выходных numpy-массивов.
         """
         return self.session.run(output_names, input_dict)
 
     def input_names(self) -> List[str]:
         """
         Получение имен слоёв input.
-        :return:
+
+        :return: Список имён входных узлов модели.
         """
         return [i.name for i in self.session.get_inputs()]
 
     def output_names(self) -> List[str]:
         """
         Получение имен слоёв output.
-        :return:
+
+        :return: Список имён выходных узлов модели.
         """
         return [o.name for o in self.session.get_outputs()]
 
     def get_input_dict(self, data_list):
         """
         Создание входного словаря.
-        :param data_list:
-        :return:
+
+        :param data_list: Список numpy-массивов.
+        :return: Dict[name, data].
         """
         return {
             node.name: data

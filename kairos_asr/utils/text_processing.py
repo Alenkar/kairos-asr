@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from ..core.data_classes import dtypes
+from ..core import dtypes
 
 logger = logging.getLogger(__name__)
 
