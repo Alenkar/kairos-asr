@@ -20,10 +20,11 @@ class KairosEncoder:
     ):
         """
         Инициализирует Encoder-модель.
+
         :param encoder_path: Путь к encoder.onnx (опционально)
         :param device: Устройство ('cuda', 'cuda:0' или 'cpu').
         """
-        logger.debug("Initialization: KairosEncoder")
+        logger.debug("Starting initialization of KairosEncoder")
 
         self.sample_rate = 16000
         self.dtype = torch.float32
@@ -36,11 +37,14 @@ class KairosEncoder:
         self.encoder = ONNXModel(encoder_path, device=device)
         self.feature_extractor = FeatureExtractor(sample_rate=self.sample_rate, device=device)
 
+        logger.info(f"KairosEncoder initialized on device: {self.device}")
+
     def _encode(self, features: np.ndarray) -> np.ndarray:
         """
-        Запуск encoder.
-        :param features:
-        :return:
+        Прогон акустических признаков через encoder ONNX-модель.
+
+        :param features: Акустические признаки формы [B, C, T].
+        :return: Encoder-выходы формы [B, D, T_enc].
         """
         length = np.array([features.shape[-1]], dtype=np.int64)
         inputs = [features.astype(np.float32), length]
@@ -52,8 +56,11 @@ class KairosEncoder:
     def encode_segment(self, segment: torch.Tensor) -> [np.ndarray | None, float | None]:
         """
         Обработка сегмента: извлекает слова с точными timestamps.
-        :param segment:
+
+        :param segment: Аудио-сегмент (torch.Tensor).
         :return:
+            enc_features — encoder-выходы или None,
+            frame_duration — длительность одного encoder-фрейма (сек) или None.
         """
         logger.debug(f"Encode segment")
         wav = prepare_audio_tensor(segment)

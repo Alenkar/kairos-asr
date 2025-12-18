@@ -5,9 +5,10 @@ from .utils import (
     check_device,
     extract_sentences_from_words,
     setup_logging,
-    get_logger,
 )
 from .models import ModelDownloader
+
+setup_logging(logger_name="kairos_asr")
 
 __all__ = [
     "KairosASR",
@@ -15,7 +16,6 @@ __all__ = [
     "check_device",
     "extract_sentences_from_words",
     "setup_logging",
-    "get_logger",
     "dtypes",
     "audio_utils",
     "ModelDownloader",

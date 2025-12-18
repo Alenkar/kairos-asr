@@ -1,5 +1,4 @@
 import argparse
-import json
 import logging
 import os
 import sys
@@ -12,12 +11,8 @@ httpx_logger = logging.getLogger("httpx")
 httpx_logger.setLevel(logging.WARNING)
 
 def setup_logging(verbose: bool = False) -> None:
-    level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format="%(message)s",
-        handlers=[logging.StreamHandler(sys.stdout)],
-    )
+    level = logging.INFO if verbose else logging.NOTSET
+    logging.basicConfig(level=level)
 
 
 def doctor_command(args: argparse.Namespace) -> int:
@@ -57,7 +52,7 @@ def doctor_command(args: argparse.Namespace) -> int:
         report["checks"]["onnxruntime"] = {"error": str(e)}
         report["status"] = "error"
 
-    models_dir = downloader.get_models_dir()
+    models_dir = downloader.get_storage_dir()
     report["checks"]["models_dir"] = {
         "path": str(models_dir),
         "exists": models_dir.exists(),
@@ -67,7 +62,7 @@ def doctor_command(args: argparse.Namespace) -> int:
     model_files = downloader.model_files
     models_info = []
     for name in model_files:
-        path = downloader.get_model_path(name)
+        path = downloader.check_local_file(name)
         exists_local = path is not None
         models_info.append(
             {
@@ -81,24 +76,21 @@ def doctor_command(args: argparse.Namespace) -> int:
 
     report["checks"]["models"] = models_info
 
-    if args.format == "json":
-        print(json.dumps(report, indent=2, ensure_ascii=False))
-    else:
-        print("Kairos-ASR Doctor")
-        print("=" * 50)
+    print("Kairos-ASR Doctor")
+    print("=" * 50)
 
-        for key, value in report["checks"].items():
-            print(f"[{key}]")
-            if isinstance(value, list):
-                for m in value:
-                    status = "✅" if m["exists"] else "❌"
-                    print(f"  {status} {m['name']}")
-            else:
-                for k, v in value.items():
-                    print(f"  {k}: {v}")
-            print()
+    for key, value in report["checks"].items():
+        print(f"[{key}]")
+        if isinstance(value, list):
+            for m in value:
+                status = "✅" if m["exists"] else "❌"
+                print(f"  {status} {m['name']}")
+        else:
+            for k, v in value.items():
+                print(f"  {k}: {v}")
+        print()
 
-        print(f"Overall status: {report['status']}")
+    print(f"Overall status: {report['status']}")
 
     return 0 if report["status"] == "ok" else 1
 
@@ -108,7 +100,6 @@ def download_command(args: argparse.Namespace) -> int:
 
     downloader = ModelDownloader()
 
-    # Фиксированные модели
     all_models = list(downloader.model_files.keys())
     targets = all_models if args.model == "all" else [args.model]
 
@@ -120,17 +111,12 @@ def download_command(args: argparse.Namespace) -> int:
 
     for model_name in targets:
         try:
-            path = downloader.download_model(model_name, force_download=args.force)
+            path = downloader.download_file(model_name, force_download=args.force)
             results[model_name] = {"status": "success", "path": str(path)}
-            if args.format == "text":
-                print(f"✅ {model_name}")
+            print(f"✅ {model_name}")
         except Exception as e:
             results[model_name] = {"status": "error", "error": str(e)}
-            if args.format == "text":
-                print(f"❌ {model_name}: {e}", file=sys.stderr)
-
-    if args.format == "json":
-        print(json.dumps(results, indent=2, ensure_ascii=False))
+            print(f"❌ {model_name}: {e}", file=sys.stderr)
 
     return 0 if all(v["status"] == "success" for v in results.values()) else 1
 
@@ -143,7 +129,7 @@ def list_command(args: argparse.Namespace) -> int:
     model_files = downloader.model_files
     result = []
     for name in model_files:
-        path = downloader.get_model_path(name)
+        path = downloader.check_local_file(name)
         exists_local = path is not None
         result.append(
             {
@@ -153,14 +139,11 @@ def list_command(args: argparse.Namespace) -> int:
             }
         )
 
-    if args.format == "json":
-        print(json.dumps(result, indent=2, ensure_ascii=False))
-    else:
-        print("Модели Kairos-ASR")
-        print("=" * 50)
-        for m in result:
-            symbol = "✅" if m["exists"] else "❌"
-            print(f"{symbol} {m['name']}")
+    print("Модели Kairos-ASR")
+    print("=" * 50)
+    for m in result:
+        symbol = "✅" if m["exists"] else "❌"
+        print(f"{symbol} {m['name']}")
 
     return 0
 
@@ -199,17 +182,14 @@ def main() -> int:
     p_download = subparsers.add_parser("download", help="Скачать модели")
     p_download.add_argument("model", nargs="?", default="all")
     p_download.add_argument("--force", "-f", action="store_true")
-    p_download.add_argument("--format", choices=["text", "json"], default="text")
     p_download.add_argument("--verbose", "-v", action="store_true")
 
     # list
     p_list = subparsers.add_parser("list", help="Список моделей")
-    p_list.add_argument("--format", choices=["text", "json"], default="text")
     p_list.add_argument("--verbose", "-v", action="store_true")
 
     # doctor
     p_doctor = subparsers.add_parser("doctor", help="Диагностика окружения")
-    p_doctor.add_argument("--format", choices=["text", "json"], default="text")
     p_doctor.add_argument("--verbose", "-v", action="store_true")
 
     # transcribe

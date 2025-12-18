@@ -7,10 +7,10 @@ logger = logging.getLogger(__name__)
 
 def load_audio(audio_path: str, sample_rate: int = 16000) -> torch.Tensor:
     """
-    Loads audio and resamples to specified rate. Supports multi-channel.
+    Загружает аудиофайл и производит resample до указанной частоты. Поддерживает многоканальный звук.
 
-    :param audio_path: Path to audio file.
-    :param sample_rate: Target sample rate.
+    :param audio_path: Путь к аудиофайлу.
+    :param sample_rate: Целевая частота дискретизации.
     :return: Tensor [channels, samples].
     """
     logger.debug(f"Load audio file")
