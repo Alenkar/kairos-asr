@@ -16,10 +16,10 @@ httpx_logger.setLevel(logging.WARNING)
 class ModelDownloader:
     def __init__(self, model_path: Optional[str] = None):
         """
-        Class for managing model weights from Hugging Face.
+        Класс для управления весами модели из Hugging Face.
 
-        :param model_path: Custom directory for storing weights.
-                           If None, the default HF cache is used.
+        :param model_path: Пользовательский каталог для хранения весов.
+                           Если None, используется кэш HF по умолчанию.
         """
         self.repo_id = "Alenkar/KairosASR"
         self.model_files = {
@@ -33,8 +33,9 @@ class ModelDownloader:
 
     def get_storage_dir(self) -> Path:
         """
-        Returns the directory where weights are (or will be) stored.
-        :return: Absolute path to the folder.
+        Возвращает директорию, где хранятся (или будут храниться) веса.
+
+        :return: Абсолютный путь к папке.
         """
         if self.model_path:
             storage_dir = self.model_path.absolute()
@@ -46,9 +47,10 @@ class ModelDownloader:
 
     def check_local_file(self, file_key: str) -> Optional[str]:
         """
-        Checks for the presence of a file on disk without network access.
+        Проверяет наличие файла на диске без доступа к сети.
 
-        :return: Path to the file or None if not found.
+        :param file_key: Имя ключ для получения имени модели.
+        :return: Путь к файлу или None, если файл не найден.
         """
         filename = self.model_files.get(file_key)
         if not filename:
@@ -78,11 +80,11 @@ class ModelDownloader:
 
     def download_file(self, file_key: str, force_download: bool = False) -> str:
         """
-        Downloads a specific weight file or returns its path if it already exists.
+        Загружает определенный файл весов или возвращает его путь, если он уже существует.
 
-        :param file_key: Key from self.model_files (e.g., 'encoder').
-        :param force_download: Force download.
-        :return: Absolute path to the file.
+        :param file_key: Ключ из self.model_files (например, 'encoder').
+        :param force_download: Принудительная загрузка.
+        :return: Абсолютный путь к файлу.
         """
         if file_key not in self.model_files:
             logger.error(f"File key '{file_key}' not found in model files.")
@@ -106,9 +108,10 @@ class ModelDownloader:
 
     def download_all(self, force_download: bool = False) -> Dict[str, Optional[str]]:
         """
-        Downloads all weight files specified in the configuration.
+        Загружает все файлы весов, указанные в конфигурации.
 
-        :return: Dictionary {logical_name: absolute_path}.
+        :param force_download: Принудительная загрузка.
+        :return: Словарь {logical_name: absolute_path}.
         """
         storage_dir = self.get_storage_dir()
         logger.debug(f"Starting download of all weights to: {storage_dir}")
@@ -121,25 +124,12 @@ class ModelDownloader:
                 logger.error(f"Failed to download {key}: {e}")
         return resolved_paths
 
-    def get_all_paths(self) -> Dict[str, Optional[str]]:
+    def resolve_models_path(self, force_download: bool = False) -> Dict[str, Optional[str]]:
         """
-        Returns paths to all files. If a file is not local, attempts to download
-        (without forced update).
-        """
-        logger.debug("Retrieving all model paths")
-        resolved_paths = {}
-        for key in self.model_files.keys():
-            resolved_paths[key] = self.check_local_file(key)
-            if resolved_paths[key] is None:
-                logger.info(f"File for {key} not found locally. Attempting download")
-                resolved_paths[key] = self.download_file(key)
-        return resolved_paths
+        Получает или загружает модели.
 
-    def resolve_models_path(self, force_download: bool = False):
-        """
-        Gets or downloads models.
-        :param force_download:
-        :return:
+        :param force_download: Принудительная загрузка.
+        :return: Dict с путями до файлов моделей.
         """
         logger.debug(f"Resolving model paths (force_download={force_download})")
         resolved_paths = {}

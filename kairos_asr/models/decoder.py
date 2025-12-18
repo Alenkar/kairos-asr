@@ -26,7 +26,7 @@ class KairosDecoder:
         :param blank_id: Путь к tokenizer.model (опционально).
         :param device: Устройство ('cuda', 'cuda:0' или 'cpu').
         """
-        logger.debug("Initialization: KairosDecoder")
+        logger.debug("Starting initialization of KairosDecoder")
 
         self.sample_rate = 16000
         self.dtype = torch.float32
@@ -34,11 +34,10 @@ class KairosDecoder:
         self.blank_id = blank_id
         self.device = check_device(device)
 
-        logger.debug(f"Device: {self.device}")
-
         self.decoder = ONNXModel(decoder_path, device=device)
         self.joint = ONNXModel(joint_path, device=device)
 
+        logger.info(f"KairosDecoder initialized on device: {self.device}")
         for inp in self.decoder.session.get_inputs():
             if len(inp.shape) == 3:
                 self.num_layers, _, self.hidden_size = inp.shape
@@ -49,7 +48,8 @@ class KairosDecoder:
     def _get_initial_states(self):
         """
         Возвращает пустые состояния для начала декодирования.
-        :return:
+
+        :return: Список numpy-массивов состояний.
         """
         return [
             np.zeros((self.num_layers, 1, self.hidden_size), dtype=np.float32),
@@ -58,9 +58,12 @@ class KairosDecoder:
 
     def decode_segment(self, enc_features: torch.Tensor) -> [List[int], List[int]]:
         """
-        Запуск decoder.
-        :param enc_features:
+        Декодирование encoder-выходов в последовательность токенов.
+
+        :param enc_features: Encoder-выходы формы [B, D, T].
         :return:
+            token_ids — список ID токенов,
+            token_frames — список индексов encoder-фреймов.
         """
         logger.debug(f"Decode segment")
 

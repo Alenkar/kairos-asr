@@ -3,7 +3,7 @@ import sentencepiece as spm
 import torch
 from typing import List, Dict, Generator, Tuple, Optional
 
-from ..core.data_classes import dtypes
+from ..core import dtypes
 
 from ..models.decoder import KairosDecoder
 from ..models.encoder import KairosEncoder
@@ -18,10 +18,9 @@ from ..utils.time_utils import CalculatedRemainingTime
 
 logger = logging.getLogger(__name__)
 
-
 class KairosASR:
     """
-    Automatic speech recognition model based on Gigaam.
+    Модель автоматического распознавания речи на основе Gigaam.
     """
     def __init__(
         self,
@@ -30,12 +29,12 @@ class KairosASR:
         force_download: bool = False
     ):
         """
-        Initializes the ASR model with optional paths to weights.
+        Инициализирует модель ASR с необязательными путями к весам.
 
-        :param model_path: Custom path to *.onnx files.
-                           If empty inside, files will be downloaded automatically.
-        :param device: Device ('cuda', 'cuda:0' or 'cpu').
-        :param force_download: Force download models and overwrite.
+        :param model_path: Пользовательский путь к файлам *.onnx.
+                           Если путь пуст, файлы будут загружены автоматически.
+        :param device: Устройство ('cuda', 'cuda:0' или 'cpu').
+        :param force_download: Принудительная загрузка моделей и перезапись.
         """
         logger.debug("Starting initialization of KairosASR")
 
@@ -77,8 +76,9 @@ class KairosASR:
 
     def _process_segment(self, segment: torch.Tensor, offset: float = 0.0) -> List[dtypes.word]:
         """
-        Processes a segment: extracts words with precise timestamps.
-        :param segment:
+        Обрабатывает сегмент: извлекает слова с точными временными метками.
+
+        :param segment: Сегмент аудио.
         :param offset:
         :return:
         """
@@ -105,14 +105,13 @@ class KairosASR:
             **vad_kwargs,
     ) -> dtypes.tts_result:
         """
-        Main function for file. Returns full data structure.
-        1. Full text (clean).
-        2. Words with timestamps.
-        3. Sentences with timestamps.
+        Основная функция для работы с файлом. Возвращает полную структуру данных.
+        1. Полный текст (чистый).
+        2. Слова с временными метками.
+        3. Предложения с временными метками.
 
-        :param wav_file: Path to file
+        :param wav_file: Путь к файлу
         :param pause_threshold:
-
         :return:
         """
         logger.info(f"Starting audio transcription for file: {wav_file}")
@@ -149,16 +148,17 @@ class KairosASR:
             with_progress: bool = False,
             pause_threshold: float = 2.0,
             **vad_kwargs
-    ) -> Generator[dtypes.word | dtypes.sentence | Tuple[dtypes.word | dtypes.sentence, Dict[str, float]], None, None]:
+    ) -> Generator[Tuple[dtypes.word | dtypes.sentence, dtypes.Progress | None], None, None]:
         """
-        Generator for streaming output.
-        :param wav_file: Path to audio file.
-        :param return_sentences: If True, collects words into sentences and yields Sentence instances.
-        :param with_progress: If True, yields (Word/Sentence object, progress_dict),
-            where progress = {'percent': float, 'segment': int, 'total_segments': int}.
-        :param pause_threshold: Pause threshold for forming sentences (in seconds).
-        :param vad_kwargs: VAD parameters.
-        :return: Word or Sentence instance (or tuple with progress if with_progress=True).
+        Генератор для потокового вывода.
+
+        :param wav_file: Путь к аудиофайлу.
+        :param return_sentences: Если True, собирает слова в предложения и возвращает экземпляры предложений.
+        :param with_progress: Если True, возвращает (объект Word/Sentence, progress_dict),
+                              где progress = {'percent': float, 'segment': int, 'total_segments': int}.
+        :param pause_threshold: Порог паузы для формирования предложений (в секундах).
+        :param vad_kwargs: Параметры VAD.
+        :return: Экземпляр слова или предложения (или кортеж с progress, если with_progress=True).
         """
         logger.info(f"Starting iterative audio transcription for file: {wav_file} (return_sentences={return_sentences}, with_progress={with_progress})")
 
@@ -199,7 +199,7 @@ class KairosASR:
 
                 for sent in sentences[:-1] if sentences else []:
                     if with_progress:
-                        progress = dtypes.progres(
+                        progress = dtypes.progress(
                             percent=round((current_segment / total_segments) * 100, 2),
                             segment=current_segment,
                             total_segments=total_segments,
@@ -215,7 +215,7 @@ class KairosASR:
             else:
                 for word in segment_words:
                     if with_progress:
-                        progress = dtypes.progres(
+                        progress = dtypes.progress(
                             percent=round((current_segment / total_segments) * 100, 2),
                             segment=current_segment,
                             total_segments=total_segments,
@@ -230,7 +230,7 @@ class KairosASR:
             logger.debug(f"Processing remaining {len(remaining_sentences)} sentences")
             for sent in remaining_sentences:
                 if with_progress:
-                    progress = dtypes.progres(
+                    progress = dtypes.progress(
                         percent=100.0,
                         segment=total_segments,
                         total_segments=total_segments,
