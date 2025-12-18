@@ -37,8 +37,8 @@ print(path)
 ## ⚡ Быстрый старт
 
 ```bash
-pip install kairos-asr
-# для GPU: pip install "kairos-asr[gpu]"
+pip install kairos-asr[cpu]
+# для GPU: pip install kairos-asr[gpu]
 ```
 
 Если нужна конкретная сборка Torch под вашу CUDA:
@@ -86,7 +86,7 @@ kairos-asr transcribe <wav_file>
 
 ## ⚙️ Системные требования
 - `ffmpeg` должен быть доступен в `PATH` (загрузка и ресемплинг аудио).
-- Доступ в интернет при первом запуске: скачивание весов с Hugging Face и модели Silero VAD через `torch.hub`. Для ускорения и избежания лимитов задайте `HF_TOKEN` (`huggingface-cli login` или экспорт переменной окружения).
+- Доступ в интернет при первом запуске: скачивание весов моделей. Для ускорения и избежания лимитов задайте `HF_TOKEN` (`huggingface-cli login` или экспорт переменной окружения).
 
 ## Больше информации
 

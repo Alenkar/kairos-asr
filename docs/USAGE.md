@@ -24,24 +24,11 @@ print(asr.transcribe("audio.wav").full_text)
 и оптимизированы для **ONNX**-инференса.
 
 По умолчанию веса загружаются автоматически. При 
-необходимости можно указать путь вручную
-или управлять загрузками через утилиту `ModelDownloader`:
+необходимости можно указать путь вручную:
 ```python
 from kairos_asr import KairosASR
 
-weights_dir_path = "<ваш путь до весов>"
-
-encoder_path   = f"{weights_dir_path}/kairos_asr_encoder.onnx"
-decoder_path   = f"{weights_dir_path}/kairos_asr_decoder.onnx"
-joint_path     = f"{weights_dir_path}/kairos_asr_joint.onnx"
-tokenizer_path = f"{weights_dir_path}/kairos_asr_tokenizer.model"
-
-asr = KairosASR(
-    encoder_path=encoder_path,
-    decoder_path=decoder_path,
-    tokenizer_path=tokenizer_path,
-    joint_path=joint_path
-)
+asr = KairosASR(model_path="<ваш путь до весов>")
 ```
 
 Автозагрузка:
@@ -50,23 +37,21 @@ from kairos_asr import KairosASR
 asr = KairosASR()
 ```
 
-Явный контроль загрузок:
+Явный контроль загрузок через утилиту `ModelDownloader`:
 ```python
 from kairos_asr.models.utils.model_downloader import ModelDownloader
 
-downloader = ModelDownloader()
+downloader = ModelDownloader()  # также можно указать model_path="<ваш путь до весов>"
 
 # Скачать все модели
-paths = downloader.download_all_models()
-
-# Получить путь до конкретной модели
-encoder_path = downloader.get_model_path("encoder")
+paths = downloader.download_all()
 
 # Скачать конкретную модель
-encoder_path = downloader.download_model("encoder")
+encoder_path = downloader.download_file("encoder")
 
-# Проверить наличие локально без загрузки
-has_tokenizer = downloader.check_file_exists_local("tokenizer")
+# Получить путь до конкретной модели
+encoder_path = downloader.check_local_file("encoder")
+
 ```
 
 ## Требования к аудио (`wav_file`)
