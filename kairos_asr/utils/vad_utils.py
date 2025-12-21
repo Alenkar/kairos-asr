@@ -3,33 +3,38 @@ import logging
 import torch
 from typing import List, Tuple
 
-from ..utils.device_utils import check_device
 from ..utils.audio_utils import load_audio
-
-from silero_vad import load_silero_vad, get_speech_timestamps
 
 logger = logging.getLogger(__name__)
 
 class SileroVAD:
-    def __init__(self, device: str='cuda'):
+    def __init__(self):
         """
         SileroVAD для разбиения длинного аудио на сегменты.
-        :param device:
+        
+        Примечание: Silero VAD работает только на CPU по задумке разработчиков.
+        Параметр device игнорируется, модель всегда использует CPU.
         """
         logger.debug("Initialization: SileroVAD")
 
-        self.device = check_device(device)
-        self.silero_model = self.get_silero_model()
-        logger.info(f"Model SileroVAD loaded : {self.device}")
+        self.silero_model, self.utils = self.get_silero_model()
+        self.get_speech_timestamps, _, self.read_audio, _, _ = self.utils
+        logger.info(f"Model SileroVAD loaded on CPU (GPU not supported by Silero VAD)")
 
-    def get_silero_model(self):
+    @staticmethod
+    def get_silero_model():
         """
-        Загружает модель Silero VAD и необходимые утилиты.
-        Использует pip-пакет silero-vad для фиксированной версии.
+        Загружает модель Silero VAD и необходимые утилиты через torch.hub.
         """
-        model = load_silero_vad()
-        model = model.to(self.device)
-        return model
+        model, utils = torch.hub.load(
+            repo_or_dir='snakers4/silero-vad',
+            model='silero_vad',
+            force_reload=False,
+            trust_repo=True,
+            verbose=False
+        )
+        model.eval()
+        return model, utils
 
     @staticmethod
     def preprocessing(audio: torch.Tensor) -> torch.Tensor:
@@ -78,9 +83,9 @@ class SileroVAD:
         segments.append(audio[int(curr_start * sr): int(curr_end * sr)])
         boundaries.append((curr_start, curr_end))
 
-    def segment_audio_file(
+    def segment_audio_tensor(
             self,
-            wav_file: str,
+            audio: torch.Tensor,
             sr: int = 16000,
             max_duration: float = 22.0,
             min_duration: float = 15.0,
@@ -88,28 +93,27 @@ class SileroVAD:
             new_chunk_threshold: float = 0.2,
     ) -> Tuple[List[torch.Tensor], List[Tuple[float, float]]]:
         """
-        Сегментирует аудиофайл на чанки, используя Silero VAD 5/6.
-        :param wav_file:
-        :param sr:
-        :param max_duration:
-        :param min_duration:
-        :param strict_limit_duration:
-        :param new_chunk_threshold:
-        :return:
+        Сегментирует аудио тензор на чанки, используя Silero VAD.
+        
+        :param audio: Аудио тензор [samples] или [channels, samples]
+        :param sr: Частота дискретизации
+        :param max_duration: Максимальная длительность сегмента
+        :param min_duration: Минимальная длительность сегмента
+        :param strict_limit_duration: Жесткий лимит длительности
+        :param new_chunk_threshold: Порог для нового чанка
+        :return: Кортеж (сегменты, границы)
         """
-        logger.debug(f"VAD Segmentation : start")
-        audio = load_audio(wav_file)
+        logger.debug(f"VAD Segmentation from tensor: start")
         audio_for_vad = self.preprocessing(audio)
-
-        speech_timestamps_samples = get_speech_timestamps(
-            audio_for_vad.to(self.device),
+        
+        speech_timestamps_samples = self.get_speech_timestamps(
+            audio_for_vad,
             self.silero_model,
             sampling_rate=sr,
             threshold=0.5,
             min_speech_duration_ms=250,
             min_silence_duration_ms=100
         )
-
         logger.debug(f"Processing of received segments")
 
         # ToDo segments находятся в памяти, возможно не стоит хранить их так
@@ -141,3 +145,28 @@ class SileroVAD:
 
         logger.debug(f"VAD Segmentation : complete")
         return segments, boundaries
+
+    def segment_audio_file(
+            self,
+            wav_file: str,
+            sr: int = 16000,
+            max_duration: float = 22.0,
+            min_duration: float = 15.0,
+            strict_limit_duration: float = 30.0,
+            new_chunk_threshold: float = 0.2,
+    ) -> Tuple[List[torch.Tensor], List[Tuple[float, float]]]:
+        """
+        Сегментирует аудиофайл на чанки, используя Silero VAD 5/6.
+        :param wav_file:
+        :param sr:
+        :param max_duration:
+        :param min_duration:
+        :param strict_limit_duration:
+        :param new_chunk_threshold:
+        :return:
+        """
+        logger.debug(f"VAD Segmentation : start")
+        audio = load_audio(wav_file)
+        return self.segment_audio_tensor(
+            audio, sr, max_duration, min_duration, strict_limit_duration, new_chunk_threshold
+        )

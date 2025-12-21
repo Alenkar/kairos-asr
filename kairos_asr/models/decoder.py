@@ -56,7 +56,7 @@ class KairosDecoder:
             np.zeros((self.num_layers, 1, self.hidden_size), dtype=np.float32),
         ]
 
-    def decode_segment(self, enc_features: torch.Tensor) -> [List[int], List[int]]:
+    def decode_segment(self, enc_features: np.ndarray) -> [List[int], List[int]]:
         """
         Декодирование encoder-выходов в последовательность токенов.
 
@@ -72,15 +72,29 @@ class KairosDecoder:
 
         states = self._get_initial_states()
         prev_token = self.blank_id
+        
+        num_decoder_inputs = len(self.decoder._cached_input_names)
+        num_joint_inputs = len(self.joint._cached_input_names)
+        
         for t in range(enc_features.shape[-1]):
             emitted = 0
             while emitted < self.max_letters_per_frame:
                 pred_in = [np.array([[prev_token]], dtype=np.int64)] + states
-                pred_out = self.decoder.run(None, self.decoder.get_input_dict(pred_in))
+                decoder_input_dict = {
+                    self.decoder._cached_input_names[i]: pred_in[i]
+                    for i in range(num_decoder_inputs)
+                }
+                
+                pred_out = self.decoder.run(decoder_input_dict)
                 pred_h = pred_out[0].swapaxes(1, 2)
 
-                joint_in = [enc_features[:, :, [t]], pred_h]
-                logits = self.joint.run(None, self.joint.get_input_dict(joint_in))[0]
+                joint_in = [enc_features[:, :, t:t+1], pred_h]
+                joint_input_dict = {
+                    self.joint._cached_input_names[i]: joint_in[i]
+                    for i in range(num_joint_inputs)
+                }
+                
+                logits = self.joint.run(joint_input_dict)[0]
                 token = logits.argmax(axis=-1).item()
 
                 if token != self.blank_id:
