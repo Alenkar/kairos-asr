@@ -4,8 +4,10 @@
 
 [![PyPI](https://img.shields.io/pypi/v/kairos-asr)](https://pypi.org/project/kairos-asr/)
 [![Python](https://img.shields.io/pypi/pyversions/kairos-asr)](https://pypi.org/project/kairos-asr/)
+[![Downloads](https://static.pepy.tech/badge/kairos-asr)](https://pepy.tech/project/kairos-asr)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Hugging Face](https://img.shields.io/badge/HuggingFace-KairosASR-yellow?logo=huggingface)](https://huggingface.co/Alenkar/KairosASR)
+
 
 ---
 
@@ -37,7 +39,7 @@
 
 ## 🖥️ Системные требования
 - `ffmpeg` должен быть доступен в `PATH` (используется для загрузки и ресемплинга аудио).
-- Доступ в интернет. При первом запуске скачиваются веса моделей с Hugging Face и модель Silero VAD.
+- Доступ в интернет. При первом запуске скачиваются веса моделей.
 - Для ускорения скачиваний и избежания лимитов рекомендуется установить токен HF: `export HF_TOKEN=...` (или `huggingface-cli login`).
 
 ### Быстрый старт (CPU)

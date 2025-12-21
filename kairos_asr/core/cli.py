@@ -5,6 +5,8 @@ import sys
 import platform
 from typing import Dict, Any
 
+from .. import __version__
+
 logger = logging.getLogger(__name__)
 
 httpx_logger = logging.getLogger("httpx")
@@ -176,6 +178,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Kairos-ASR — русское распознавание речи",
     )
+    parser.add_argument(
+        "--version", "-V",
+        action="version",
+        version=f"kairos-asr {__version__}",
+        help="Показать версию и выйти"
+    )
     subparsers = parser.add_subparsers(dest="command")
 
     # download
@@ -194,10 +202,10 @@ def main() -> int:
 
     # transcribe
     p_transcribe = subparsers.add_parser("transcribe", help="Распознать аудио")
-    p_transcribe.add_argument("audio")
-    p_transcribe.add_argument("--device", default="cuda")
-    p_transcribe.add_argument("--sentences", action="store_true")
-    p_transcribe.add_argument("--progress", action="store_true")
+    p_transcribe.add_argument("audio", help="Путь к аудио файлу")
+    p_transcribe.add_argument("--device", default="cuda", help="Устройство (cuda/cpu)")
+    p_transcribe.add_argument("--sentences", action="store_true", help="Выводить предложения отдельно")
+    p_transcribe.add_argument("--progress", action="store_true", help="Показывать прогресс обработки")
     p_transcribe.add_argument("--verbose", "-v", action="store_true")
 
     args = parser.parse_args()

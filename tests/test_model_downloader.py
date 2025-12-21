@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,13 @@ MODEL_FILES = {
     "joint": "kairos_asr_joint.onnx",
     "tokenizer": "kairos_asr_tokenizer.model",
 }
+
+
+def norm_os_path(value_path):
+    if os.name == "nt":
+        value_path = f"C:{value_path}"
+    value_path = os.path.normpath(value_path)
+    return value_path
 
 
 def test_init_default():
@@ -49,7 +57,7 @@ def test_check_local_file_custom_exists(tmp_path):
     custom_path.mkdir()
     file_name = "kairos_asr_encoder.onnx"
     file_path = custom_path / file_name
-    file_path.touch()  # Создаём пустой файл
+    file_path.touch()
 
     downloader = ModelDownloader(model_path=str(custom_path))
     result = downloader.check_local_file("encoder")
@@ -68,10 +76,10 @@ def test_check_local_file_custom_not_exists(tmp_path):
 @patch("kairos_asr.models.utils.model_downloader.hf_hub_download")
 def test_check_local_file_default_exists(mock_hf_download):
     downloader = ModelDownloader()
-    mock_hf_download.return_value = "/cache/path/model.onnx"
-
+    value = norm_os_path("/cache/path/model.onnx")
+    mock_hf_download.return_value = value
     result = downloader.check_local_file("encoder")
-    assert result == "/cache/path/model.onnx"
+    assert result == value
     mock_hf_download.assert_called_once_with(
         repo_id=downloader.repo_id,
         filename="kairos_asr_encoder.onnx",
@@ -94,11 +102,12 @@ def test_check_local_file_invalid_key():
 
 @patch("kairos_asr.models.utils.model_downloader.hf_hub_download")
 def test_download_file(mock_hf_download):
+    value = norm_os_path("/downloaded/path/model.onnx")
     downloader = ModelDownloader()
-    mock_hf_download.return_value = "/downloaded/path/model.onnx"
+    mock_hf_download.return_value = value
 
     result = downloader.download_file("encoder")
-    assert result == "/downloaded/path/model.onnx"
+    assert result == value
     mock_hf_download.assert_called_once_with(
         repo_id=downloader.repo_id,
         filename="kairos_asr_encoder.onnx",

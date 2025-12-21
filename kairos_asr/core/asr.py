@@ -1,7 +1,8 @@
 import logging
 import sentencepiece as spm
 import torch
-from typing import List, Dict, Generator, Tuple, Optional
+import numpy as np
+from typing import List, Generator, Tuple, Optional, Union, overload, Literal
 
 from ..core import dtypes
 
@@ -15,6 +16,7 @@ from ..utils.text_processing import (
     extract_sentences_from_words, extract_words_from_tokens
 )
 from ..utils.time_utils import CalculatedRemainingTime
+from ..utils.audio_utils import prepare_audio_array
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +53,7 @@ class KairosASR:
         self.calculated_remaining_time = CalculatedRemainingTime()
         logger.debug("CalculatedRemainingTime initialized")
 
-        self.silero_vad = SileroVAD(device=device)
+        self.silero_vad = SileroVAD()
         logger.debug("SileroVAD initialized")
 
         self.tokenizer = spm.SentencePieceProcessor()
@@ -98,27 +100,84 @@ class KairosASR:
 
         return words
 
-    def transcribe(
+    def transcribe_chunk(
             self,
-            wav_file: str,
+            audio_array: Union[np.ndarray, torch.Tensor],
+            sample_rate: Optional[int] = None,
+            use_vad: bool = False,
             pause_threshold: float = 2.0,
-            **vad_kwargs,
     ) -> dtypes.tts_result:
         """
-        Основная функция для работы с файлом. Возвращает полную структуру данных.
+        Обрабатывает короткий чанк аудио напрямую без VAD (для потоковой обработки).
+        Для коротких чанков (< 5 секунд) рекомендуется use_vad=False для скорости.
+        
+        :param audio_array: Numpy массив или torch.Tensor с аудио данными [samples] или [channels, samples]
+        :param sample_rate: Частота дискретизации (обязательно если указан audio_array)
+        :param use_vad: Если True, использует VAD для сегментации (медленнее, но точнее для длинных чанков)
+        :param pause_threshold: Порог паузы для формирования предложений (в секундах)
+        :return: Результат транскрипции
+        """
+        audio_tensor = prepare_audio_array(
+            audio_array, sample_rate, self.sample_rate
+        )
+        
+        if use_vad:
+            logger.debug("Processing chunk with VAD")
+            segments, boundaries = self.silero_vad.segment_audio_tensor(
+                audio_tensor, sr=self.sample_rate
+            )
+            all_words: List[dtypes.word] = []
+            for segment, (start_offset, _) in zip(segments, boundaries):
+                segment_words = self._process_segment(segment, offset=start_offset)
+                all_words.extend(segment_words)
+        else:
+            logger.debug("Processing chunk directly without VAD")
+            all_words = self._process_segment(audio_tensor, offset=0.0)
+        
+        sentences_objs = extract_sentences_from_words(all_words, pause_threshold=pause_threshold)
+        full_text_str = " ".join([s.text for s in sentences_objs])
+        
+        return dtypes.tts_result(
+            full_text=full_text_str,
+            words=all_words,
+            sentences=sentences_objs
+        )
+
+    def transcribe(
+            self,
+            wav_file: Optional[str] = None,
+            audio_array: Optional[Union[np.ndarray, torch.Tensor]] = None,
+            sample_rate: Optional[int] = None,
+            pause_threshold: float = 2.0,
+    ) -> dtypes.tts_result:
+        """
+        Основная функция для работы с файлом или numpy/torch массивом. 
+        Возвращает полную структуру данных:
         1. Полный текст (чистый).
         2. Слова с временными метками.
         3. Предложения с временными метками.
 
-        :param wav_file: Путь к файлу
-        :param pause_threshold:
-        :return:
+        :param wav_file: Путь к файлу (взаимоисключающе с audio_array)
+        :param audio_array: Numpy массив или torch.Tensor с аудио данными [samples] или [channels, samples]
+        :param sample_rate: Частота дискретизации для audio_array (обязательно если указан audio_array)
+        :param pause_threshold: Порог паузы для формирования предложений (в секундах)
+        :return: Результат транскрипции
+        :raises ValidationError: Если параметры невалидны
         """
-        logger.info(f"Starting audio transcription for file: {wav_file}")
-
-        segments, boundaries = self.silero_vad.segment_audio_file(
-            wav_file, sr=self.sample_rate, **vad_kwargs
-        )
+        if wav_file is not None:
+            logger.info(f"Starting audio transcription for file: {wav_file}")
+            segments, boundaries = self.silero_vad.segment_audio_file(
+                wav_file, sr=self.sample_rate
+            )
+        else:
+            audio_tensor = prepare_audio_array(
+                audio_array, sample_rate, self.sample_rate
+            )
+            logger.info(f"Starting audio transcription from array (shape: {audio_tensor.shape})")
+            segments, boundaries = self.silero_vad.segment_audio_tensor(
+                audio_tensor, sr=self.sample_rate
+            )
+        
         logger.debug(f"Segmented audio into {len(segments)} segments")
 
         all_words: List[dtypes.word] = []
@@ -141,30 +200,88 @@ class KairosASR:
             sentences=sentences_objs
         )
 
+    @overload
     def transcribe_iterative(
             self,
-            wav_file: str,
+            wav_file: Optional[str] = None,
+            audio_array: Optional[Union[np.ndarray, torch.Tensor]] = None,
+            sample_rate: Optional[int] = None,
+            return_sentences: Literal[False] = False,
+            with_progress: Literal[False] = False,
+            pause_threshold: float = 2.0,
+    ) -> Generator[dtypes.word, None, None]:
+        ...
+
+    @overload
+    def transcribe_iterative(
+            self,
+            wav_file: Optional[str] = None,
+            audio_array: Optional[Union[np.ndarray, torch.Tensor]] = None,
+            sample_rate: Optional[int] = None,
+            return_sentences: Literal[True] = True,
+            with_progress: Literal[False] = False,
+            pause_threshold: float = 2.0,
+    ) -> Generator[dtypes.sentence, None, None]:
+        ...
+
+    @overload
+    def transcribe_iterative(
+            self,
+            wav_file: Optional[str] = None,
+            audio_array: Optional[Union[np.ndarray, torch.Tensor]] = None,
+            sample_rate: Optional[int] = None,
+            return_sentences: Literal[False] = False,
+            with_progress: Literal[True] = True,
+            pause_threshold: float = 2.0,
+    ) -> Generator[Tuple[dtypes.word, dtypes.Progress], None, None]:
+        ...
+
+    @overload
+    def transcribe_iterative(
+            self,
+            wav_file: Optional[str] = None,
+            audio_array: Optional[Union[np.ndarray, torch.Tensor]] = None,
+            sample_rate: Optional[int] = None,
+            return_sentences: Literal[True] = True,
+            with_progress: Literal[True] = True,
+            pause_threshold: float = 2.0,
+    ) -> Generator[Tuple[dtypes.sentence, dtypes.Progress], None, None]:
+        ...
+
+    def transcribe_iterative(
+            self,
+            wav_file: Optional[str] = None,
+            audio_array: Optional[Union[np.ndarray, torch.Tensor]] = None,
+            sample_rate: Optional[int] = None,
             return_sentences: bool = False,
             with_progress: bool = False,
             pause_threshold: float = 2.0,
-            **vad_kwargs
-    ) -> Generator[Tuple[dtypes.word | dtypes.sentence, dtypes.Progress | None], None, None]:
+    ) -> Generator[Union[dtypes.word, dtypes.sentence, Tuple[Union[dtypes.word, dtypes.sentence], dtypes.Progress]], None, None]:
         """
         Генератор для потокового вывода.
 
-        :param wav_file: Путь к аудиофайлу.
+        :param wav_file: Путь к аудиофайлу (взаимоисключающе с audio_array).
+        :param audio_array: Numpy массив или torch.Tensor с аудио данными.
+        :param sample_rate: Частота дискретизации для audio_array.
         :param return_sentences: Если True, собирает слова в предложения и возвращает экземпляры предложений.
         :param with_progress: Если True, возвращает (объект Word/Sentence, progress_dict),
                               где progress = {'percent': float, 'segment': int, 'total_segments': int}.
         :param pause_threshold: Порог паузы для формирования предложений (в секундах).
-        :param vad_kwargs: Параметры VAD.
         :return: Экземпляр слова или предложения (или кортеж с progress, если with_progress=True).
         """
-        logger.info(f"Starting iterative audio transcription for file: {wav_file} (return_sentences={return_sentences}, with_progress={with_progress})")
-
-        segments, boundaries = self.silero_vad.segment_audio_file(
-            wav_file, sr=self.sample_rate, **vad_kwargs
-        )
+        if wav_file is not None:
+            logger.info(f"Starting iterative audio transcription for file: {wav_file} (return_sentences={return_sentences}, with_progress={with_progress})")
+            segments, boundaries = self.silero_vad.segment_audio_file(
+                wav_file, sr=self.sample_rate
+            )
+        else:
+            audio_tensor = prepare_audio_array(
+                audio_array, sample_rate, self.sample_rate
+            )
+            logger.info(f"Starting iterative audio transcription from array (return_sentences={return_sentences}, with_progress={with_progress})")
+            segments, boundaries = self.silero_vad.segment_audio_tensor(
+                audio_tensor, sr=self.sample_rate
+            )
         logger.debug(f"Segmented audio into {len(segments)} segments")
 
         total_segments = len(segments)
