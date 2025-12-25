@@ -35,6 +35,7 @@ dependencies = [
     "torch>=2.5.1",
     "torchaudio>=2.5.1",
     "sentencepiece>=0.2.1",
+    "silero-vad>=6.2.0",
     "scipy>=1.15.3",
 ]
 
