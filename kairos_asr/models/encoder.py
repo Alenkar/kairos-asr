@@ -48,10 +48,7 @@ class KairosEncoder:
         """
         length = np.array([features.shape[-1]], dtype=np.int64)
         inputs = [features.astype(np.float32), length]
-        return self.encoder.run(
-            self.encoder.output_names(),
-            self.encoder.get_input_dict(inputs)
-        )[0]
+        return self.encoder.run(self.encoder.get_input_dict(inputs))[0]
 
     def encode_segment(self, segment: torch.Tensor) -> [np.ndarray | None, float | None]:
         """
