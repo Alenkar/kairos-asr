@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 
+import numpy as np
 import onnxruntime as ort
 
 logger = logging.getLogger(__name__)
@@ -132,23 +133,25 @@ class ONNXModel:
         """
         Запуск inference с оптимизацией через IO Binding для GPU.
 
-        :param input_dict: Словарь входных данных.
+        :param input_dict: Словарь входных данных (ожидаются NumPy-массивы на CPU).
         :return: Список выходных numpy-массивов.
         """
         if self.use_io_binding:
             try:
                 io_binding = self.session.io_binding()
-                
+
                 for name, value in input_dict.items():
-                    io_binding.bind_input(name, value)
-                
+                    if not isinstance(value, np.ndarray):
+                        raise ValueError(f"Вход '{name}' должен быть NumPy-массивом для IO Binding.")
+                    io_binding.bind_cpu_input(name, value)
+
                 for name in self._cached_output_names:
                     io_binding.bind_output(name)
-                
+
                 self.session.run_with_iobinding(io_binding)
                 return io_binding.copy_outputs_to_cpu()
             except Exception as e:
-                logger.debug(f"IO Binding failed, using standard run: {e}")
+                logger.debug(f"IO Binding не удался, переход к стандартному запуску: {e}")
                 return self.session.run(self._cached_output_names, input_dict)
         else:
             return self.session.run(self._cached_output_names, input_dict)

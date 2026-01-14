@@ -88,3 +88,22 @@ def prepare_audio_array(
             audio_tensor = audio_tensor.squeeze(0)
 
     return audio_tensor
+
+
+# def audio_to_wav(input_file: str) -> str:
+#     """
+#     Функция перевода аудиофайла в формат WAV.
+#     :param input_file: Путь к аудиофайлу.
+#     :return:
+#     """
+#     output_file = input_file[:-4] + "_convert.wav"
+#
+#     output_file = output_file.replace(" ", "_")
+#
+#     from pydub import AudioSegment
+#     sound = AudioSegment.from_file(input_file)
+#     sound = sound.set_frame_rate(16000)
+#     sound = sound.set_sample_width(2)
+#     sound = sound.set_channels(1)
+#     sound.export(output_file, format="wav")
+#     return output_file
