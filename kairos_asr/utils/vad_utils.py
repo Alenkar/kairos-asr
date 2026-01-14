@@ -5,6 +5,8 @@ from typing import List, Tuple
 
 from ..utils.audio_utils import load_audio
 
+from silero_vad import load_silero_vad, get_speech_timestamps
+
 logger = logging.getLogger(__name__)
 
 class SileroVAD:
