@@ -36,9 +36,11 @@ def doctor_command(args: argparse.Namespace) -> int:
 
     try:
         cuda_available = torch.cuda.is_available()
+        mps_available = bool(getattr(torch.backends, "mps", None)) and torch.backends.mps.is_available()
         report["checks"]["torch"] = {
             "version": torch.__version__,
             "cuda_available": cuda_available,
+            "mps_available": mps_available,
         }
     except Exception as e:
         report["checks"]["torch"] = {"error": str(e)}
@@ -203,7 +205,7 @@ def main() -> int:
     # transcribe
     p_transcribe = subparsers.add_parser("transcribe", help="Распознать аудио")
     p_transcribe.add_argument("audio", help="Путь к аудио файлу")
-    p_transcribe.add_argument("--device", default="cuda", help="Устройство (cuda/cpu)")
+    p_transcribe.add_argument("--device", default="auto", help="Устройство (auto/cuda/mps/metal/cpu)")
     p_transcribe.add_argument("--sentences", action="store_true", help="Выводить предложения отдельно")
     p_transcribe.add_argument("--progress", action="store_true", help="Показывать прогресс обработки")
     p_transcribe.add_argument("--verbose", "-v", action="store_true")

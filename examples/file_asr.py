@@ -3,6 +3,7 @@ import kairos_asr
 file_path = "../test_data/record.wav"
 
 asr = kairos_asr.KairosASR()
+print(kairos_asr.__version__)
 
 ####################################################################################
 

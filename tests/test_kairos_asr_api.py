@@ -23,23 +23,16 @@ def _models_available() -> bool:
 
 
 @pytest.fixture(scope="module")
-def asr_cuda():
-    """Фикстура для создания экземпляра KairosASR на CUDA (если доступно)."""
-    try:
-        import torch
-        if not torch.cuda.is_available():
-            pytest.skip("CUDA не доступен на этой системе")
-    except ImportError:
-        pytest.skip("PyTorch не установлен")
-
-    yield KairosASR(device="cuda")
+def asr_auto():
+    """Фикстура для создания экземпляра KairosASR с авто-выбором устройства."""
+    yield KairosASR(device="auto")
 
 
 @pytest.mark.skipif(not _ffmpeg_available(), reason="ffmpeg требуется для ASR-тестов")
 @pytest.mark.skipif(not _models_available(), reason="Модели не найдены локально; выполните `kairos-asr download`")
 @pytest.mark.integration
-def test_python_api_transcribe(asr_cuda):
-    result = asr_cuda.transcribe(str(TEST_WAV))
+def test_python_api_transcribe(asr_auto):
+    result = asr_auto.transcribe(str(TEST_WAV))
     assert result.full_text.strip(), "Текст транскрипции пустой"
     assert len(result.words) > 0, "Список слов пустой"
     assert len(result.sentences) > 0, "Список предложений пустой"
@@ -48,8 +41,8 @@ def test_python_api_transcribe(asr_cuda):
 @pytest.mark.skipif(not _ffmpeg_available(), reason="ffmpeg требуется для ASR-тестов")
 @pytest.mark.skipif(not _models_available(), reason="Модели не найдены локально; выполните `kairos-asr download`")
 @pytest.mark.integration
-def test_python_api_transcribe_iterative_words(asr_cuda):
-    generator = asr_cuda.transcribe_iterative(str(TEST_WAV), return_sentences=False)
+def test_python_api_transcribe_iterative_words(asr_auto):
+    generator = asr_auto.transcribe_iterative(str(TEST_WAV), return_sentences=False)
     words = list(generator)
     assert len(words) > 0, "Слова не получены из генератора"
     assert isinstance(words[0], dtypes.word)
@@ -58,8 +51,8 @@ def test_python_api_transcribe_iterative_words(asr_cuda):
 @pytest.mark.skipif(not _ffmpeg_available(), reason="ffmpeg требуется для ASR-тестов")
 @pytest.mark.skipif(not _models_available(), reason="Модели не найдены локально; выполните `kairos-asr download`")
 @pytest.mark.integration
-def test_python_api_transcribe_iterative_sentences(asr_cuda):
-    generator = asr_cuda.transcribe_iterative(str(TEST_WAV), return_sentences=True)
+def test_python_api_transcribe_iterative_sentences(asr_auto):
+    generator = asr_auto.transcribe_iterative(str(TEST_WAV), return_sentences=True)
     sentences = list(generator)
     assert len(sentences) > 0, "Предложения не получены из генератора"
     assert isinstance(sentences[0], dtypes.sentence)
@@ -68,8 +61,8 @@ def test_python_api_transcribe_iterative_sentences(asr_cuda):
 @pytest.mark.skipif(not _ffmpeg_available(), reason="ffmpeg требуется для ASR-тестов")
 @pytest.mark.skipif(not _models_available(), reason="Модели не найдены локально; выполните `kairos-asr download`")
 @pytest.mark.integration
-def test_python_api_transcribe_iterative_with_progress(asr_cuda):
-    generator = asr_cuda.transcribe_iterative(str(TEST_WAV), with_progress=True)
+def test_python_api_transcribe_iterative_with_progress(asr_auto):
+    generator = asr_auto.transcribe_iterative(str(TEST_WAV), with_progress=True)
     items = list(generator)
     assert len(items) > 0
     item, progress = items[0]
