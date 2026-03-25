@@ -11,7 +11,7 @@ from ..models.encoder import KairosEncoder
 from ..models.utils.model_downloader import ModelDownloader
 
 from ..utils.vad_utils import SileroVAD
-from ..utils.device_utils import check_device
+from ..utils.device_utils import check_device, normalize_device
 from ..utils.text_processing import (
     extract_sentences_from_words, extract_words_from_tokens
 )
@@ -27,7 +27,7 @@ class KairosASR:
     def __init__(
         self,
         model_path: Optional[str] = None,
-        device: str = "cuda",
+        device: str = "auto",
         force_download: bool = False
     ):
         """
@@ -35,7 +35,7 @@ class KairosASR:
 
         :param model_path: Пользовательский путь к файлам *.onnx.
                            Если путь пуст, файлы будут загружены автоматически.
-        :param device: Устройство ('cuda', 'cuda:0' или 'cpu').
+        :param device: Устройство ('auto', 'cuda', 'cuda:0', 'mps', 'metal' или 'cpu').
         :param force_download: Принудительная загрузка моделей и перезапись.
         """
         logger.debug("Starting initialization of KairosASR")
@@ -43,7 +43,8 @@ class KairosASR:
         self.sample_rate = 16000
         self.dtype = torch.float32
         self.max_letters_per_frame = 10
-        self.device = check_device(device)
+        device_norm = normalize_device(device)
+        self.device = check_device(device_norm)
         logger.debug(f"Device checked and set to: {self.device}")
 
         model_downloader = ModelDownloader(model_path=model_path)
@@ -64,13 +65,13 @@ class KairosASR:
         logger.debug(f"Tokenizer loaded, blank_id: {blank_id}")
 
         self.encoder = KairosEncoder(
-            encoder_path=resolved_paths["encoder"], device=device
+            encoder_path=resolved_paths["encoder"], device=device_norm
         )
         logger.debug("KairosEncoder initialized")
 
         self.decoder = KairosDecoder(
             decoder_path=resolved_paths["decoder"], joint_path=resolved_paths["joint"],
-            blank_id=blank_id, device=device
+            blank_id=blank_id, device=device_norm
         )
         logger.debug("KairosDecoder initialized")
 

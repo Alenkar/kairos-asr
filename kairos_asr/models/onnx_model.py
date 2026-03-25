@@ -12,7 +12,7 @@ class ONNXModel:
     def __init__(
             self,
             model_path: str,
-            device: str = "cuda",
+            device: str = "auto",
             optimize: bool = True,
             gpu_mem_limit: Optional[int] = None,
             enable_tunable_ops: bool = False,
@@ -21,7 +21,7 @@ class ONNXModel:
         Обертка для ONNX моделей с оптимизациями.
 
         :param model_path: Путь к файлу или имя модели из реестра
-        :param device: 'cuda' или 'cpu'
+        :param device: 'auto', 'cuda', 'mps', 'metal' или 'cpu'
         :param optimize: Включить оптимизацию графа (по умолчанию True)
         :param gpu_mem_limit: Лимит памяти GPU в байтах (None = без лимита)
         :param enable_tunable_ops: Включить tunable operators для автоматической оптимизации (по умолчанию False, т.к. может замедлять первый запуск)
@@ -30,9 +30,15 @@ class ONNXModel:
         if not model_path.exists():
             raise FileNotFoundError(f"Файл модели не найден: {model_path}")
 
+        device_lower = device.lower()
+        if device_lower == "auto":
+            available = ort.get_available_providers()
+            device_lower = "cuda" if "CUDAExecutionProvider" in available else "cpu"
+
         opts = ort.SessionOptions()
-        
-        if "cpu" in device.lower():
+
+        cpu_like = "cpu" in device_lower or device_lower in ("mps", "metal")
+        if cpu_like:
             opts.intra_op_num_threads = min(16, os.cpu_count() or 1)
             opts.inter_op_num_threads = 1
             opts.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
@@ -47,8 +53,8 @@ class ONNXModel:
         
         opts.log_severity_level = 3
 
-        providers = self._get_providers(device)
-        provider_options = self._get_provider_options(device, gpu_mem_limit, enable_tunable_ops, providers)
+        providers = self._get_providers(device_lower)
+        provider_options = self._get_provider_options(device_lower, gpu_mem_limit, enable_tunable_ops, providers)
         
         session_kwargs = {
             "sess_options": opts,
@@ -62,11 +68,8 @@ class ONNXModel:
             **session_kwargs
         )
         
-        self.use_io_binding = (
-            "cuda" in device.lower() and 
-            "CUDAExecutionProvider" in providers
-        )
-        self.device = device.lower()
+        self.use_io_binding = "cuda" in device_lower and "CUDAExecutionProvider" in providers
+        self.device = device_lower
         
         self._cached_input_names = [node.name for node in self.session.get_inputs()]
         self._cached_output_names = [node.name for node in self.session.get_outputs()]
@@ -84,6 +87,8 @@ class ONNXModel:
         
         if "cuda" in device.lower() and "CUDAExecutionProvider" in available:
             return ["CUDAExecutionProvider", "CPUExecutionProvider"]
+        if "mps" in device.lower() or "metal" in device.lower():
+            return ["CPUExecutionProvider"]
         elif "tensorrt" in device.lower() and "TensorrtExecutionProvider" in available:
             return ["TensorrtExecutionProvider", "CUDAExecutionProvider", "CPUExecutionProvider"]
         else:
@@ -99,7 +104,7 @@ class ONNXModel:
         """
         Получить опции провайдеров для оптимизации GPU.
         
-        :param device: Устройство ('cuda' или 'cpu')
+        :param device: Устройство ('auto', 'cuda', 'mps', 'metal' или 'cpu')
         :param gpu_mem_limit: Лимит памяти GPU в байтах
         :param enable_tunable_ops: Включить tunable operators
         :param providers: Список провайдеров

@@ -5,7 +5,7 @@ import numpy as np
 
 from ..core.feature_extractor import FeatureExtractor
 from ..models.onnx_model import ONNXModel
-from ..utils.device_utils import check_device, prepare_audio_tensor
+from ..utils.device_utils import check_device, normalize_device, prepare_audio_tensor
 
 logger = logging.getLogger(__name__)
 
@@ -16,13 +16,13 @@ class KairosEncoder:
     def __init__(
         self,
         encoder_path: str,
-        device: str = "cuda",
+        device: str = "auto",
     ):
         """
         Инициализирует Encoder-модель.
 
         :param encoder_path: Путь к encoder.onnx (опционально)
-        :param device: Устройство ('cuda', 'cuda:0' или 'cpu').
+        :param device: Устройство ('auto', 'cuda', 'cuda:0', 'mps', 'metal' или 'cpu').
         """
         logger.debug("Starting initialization of KairosEncoder")
 
@@ -30,12 +30,13 @@ class KairosEncoder:
         self.dtype = torch.float32
         self.max_letters_per_frame = 10
 
-        self.device = check_device(device)
+        device_norm = normalize_device(device)
+        self.device = check_device(device_norm)
 
         logger.debug(f"Device: {self.device}")
 
-        self.encoder = ONNXModel(encoder_path, device=device)
-        self.feature_extractor = FeatureExtractor(sample_rate=self.sample_rate, device=device)
+        self.encoder = ONNXModel(encoder_path, device=device_norm)
+        self.feature_extractor = FeatureExtractor(sample_rate=self.sample_rate, device=device_norm)
 
         logger.info(f"KairosEncoder initialized on device: {self.device}")
 

@@ -76,7 +76,7 @@ def test_cli_transcribe_full_text():
         "transcribe",
         str(TEST_WAV),
         "--device",
-        "cuda",
+        "auto",
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120, encoding='utf-8')
     assert proc.returncode == 0, f"CLI ошибка: {proc.stderr}"
@@ -95,7 +95,7 @@ def test_cli_transcribe_sentences():
         str(TEST_WAV),
         "--sentences",
         "--device",
-        "cuda",
+        "auto",
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120, encoding='utf-8')
     assert proc.returncode == 0
@@ -114,7 +114,7 @@ def test_cli_transcribe_progress():
         str(TEST_WAV),
         "--progress",
         "--device",
-        "cuda",
+        "auto",
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120, encoding='utf-8')
     assert proc.returncode == 0
