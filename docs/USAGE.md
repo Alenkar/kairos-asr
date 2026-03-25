@@ -13,7 +13,7 @@
 ```python
 from kairos_asr import KairosASR
 
-asr = KairosASR()  # авто-загрузка весов
+asr = KairosASR()  # device="auto" по умолчанию
 print(asr.transcribe("audio.wav").full_text)
 ```
 
@@ -121,17 +121,17 @@ kairos-asr transcribe path/to/audio.wav
 ```
 
 Команды:
-- `kairos-asr doctor` — проверка окружения (Python, Torch, CUDA, Onnxruntime, Models dir).
+- `kairos-asr doctor` — проверка окружения (Python, Torch, CUDA/MPS, Onnxruntime, Models dir).
 - `kairos-asr list` — показывает локальное наличие весов и пути.
 - `kairos-asr download [model]` — скачивает все веса или только указанные (`all|encoder|decoder|joint|tokenizer`).
 - `kairos-asr transcribe <wav_file>` — транскрипция файла.
 
 Полезные опции:
-- `--device cpu|cuda` — выбрать устройство.
+- `--device auto|cpu|cuda|mps|metal` — выбрать устройство.
 - `--progress` — печатать прогресс при транскрипции (если реализовано в CLI).
 - `--sentences` — печатать текст в виде отдельных предложений. 
 
 Пример с явным устройством и прогрессом:
 ```bash
-kairos-asr transcribe example.wav --device cpu --progress
+kairos-asr transcribe example.wav --device auto --progress
 ```

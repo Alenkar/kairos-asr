@@ -21,15 +21,15 @@
 ---
 
 - Оптимизированный ONNX-инференс
-- Работает на **CPU** и **GPU (CUDA, extra `[gpu]`)**
+- Работает на **CPU**, **GPU (CUDA, extra `[gpu]`)** и **Metal (MPS, extra `[metal]`)**
 - Поддержка временных меток (**word-level**, **sentence-level**)
 - Итеративная обработка с выводом прогресса и **ETA**
 - Встроенный **Voice-Activity-Detection ([Silero VAD](https://github.com/snakers4/silero-vad))**
 - Поддержка **длинных аудио**
 - Простая установка и использование
-- Поддержка **Windows** и **Linux**
+- Поддержка **Windows**, **Linux** и **macOS**
 ## ⚡ TL;DR
-- `pip install kairos-asr[gpu]`
+- `pip install kairos-asr[gpu]` (Windows/Linux) или `pip install kairos-asr[metal]` (macOS)
 - Запустить: `kairos-asr transcribe example.wav` или см. Python сниппет ниже.
 - Полное руководство: `docs/USAGE.md`.
 
@@ -47,6 +47,14 @@
 ```bash
 pip install kairos-asr[cpu]
 ```
+
+### macOS (Metal/MPS)
+
+```bash
+pip install kairos-asr[metal]
+```
+
+На macOS ONNX-инференс работает на CPU, а Torch-часть (feature extraction) использует MPS при доступности.
 
 ### Поддержка GPU (CUDA)
 
@@ -68,7 +76,7 @@ pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.
 ```python
 from kairos_asr import KairosASR
 
-asr = KairosASR()  # авто-загрузка весов
+asr = KairosASR()  # device="auto" по умолчанию
 result = asr.transcribe(wav_file="audio.wav")
 print(result.full_text)
 ```

@@ -6,18 +6,19 @@
 
 Основные возможности:
 - Оптимизированный ONNX-инференс
-- **CPU** и **GPU (CUDA, extra `[gpu]`)**
+- **CPU**, **GPU (CUDA, extra `[gpu]`)** и **Metal (MPS, extra `[metal]`)**
 - Временные метки (**word-level**, **sentence-level**)
 - Итеративная обработка с прогрессом и ETA
 - Встроенный **Voice-Activity-Detection (VAD)**
 - Поддержка длинных аудио
-- Поддержка **Windows** и **Linux**
+- Поддержка **Windows**, **Linux** и **macOS**
 
 ## ⚡ Быстрый старт
 
 ```bash
 pip install kairos-asr[cpu]
-# для GPU: pip install kairos-asr[gpu]
+# для GPU (Windows/Linux): pip install kairos-asr[gpu]
+# для macOS (Metal/MPS): pip install kairos-asr[metal]
 ```
 
 Если нужна конкретная сборка Torch под вашу CUDA:

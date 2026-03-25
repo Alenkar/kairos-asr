@@ -3,6 +3,7 @@ from .core import KairosASR, dtypes
 from .utils import (
     audio_utils,
     check_device,
+    normalize_device,
     extract_sentences_from_words,
     setup_logging,
 )
@@ -14,6 +15,7 @@ __all__ = [
     "KairosASR",
     "__version__",
     "check_device",
+    "normalize_device",
     "extract_sentences_from_words",
     "setup_logging",
     "dtypes",

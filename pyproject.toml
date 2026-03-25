@@ -40,7 +40,8 @@ dependencies = [
 
 [project.optional-dependencies]
 cpu = ["onnxruntime>=1.19.2"]
-gpu = ["onnxruntime-gpu>=1.19.2"]
+gpu = ["onnxruntime-gpu>=1.19.2; platform_system != 'Darwin'"]
+metal = ["onnxruntime>=1.19.2; platform_system == 'Darwin'"]
 
 [project.urls]
 Homepage = "https://github.com/Alenkar/kairos-asr"

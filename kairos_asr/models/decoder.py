@@ -4,7 +4,7 @@ import torch
 import numpy as np
 
 from ..models.onnx_model import ONNXModel
-from ..utils.device_utils import check_device
+from ..utils.device_utils import check_device, normalize_device
 
 logger = logging.getLogger(__name__)
 
@@ -17,14 +17,14 @@ class KairosDecoder:
         decoder_path: str,
         joint_path: str,
         blank_id: int,
-        device: str = "cuda",
+        device: str = "auto",
     ):
         """
         Инициализирует Decoder-модель.
         :param decoder_path: Путь к decoder.onnx (опционально).
         :param joint_path: Путь к joint.onnx (опционально).
         :param blank_id: Путь к tokenizer.model (опционально).
-        :param device: Устройство ('cuda', 'cuda:0' или 'cpu').
+        :param device: Устройство ('auto', 'cuda', 'cuda:0', 'mps', 'metal' или 'cpu').
         """
         logger.debug("Starting initialization of KairosDecoder")
 
@@ -32,10 +32,11 @@ class KairosDecoder:
         self.dtype = torch.float32
         self.max_letters_per_frame = 10
         self.blank_id = blank_id
-        self.device = check_device(device)
+        device_norm = normalize_device(device)
+        self.device = check_device(device_norm)
 
-        self.decoder = ONNXModel(decoder_path, device=device)
-        self.joint = ONNXModel(joint_path, device=device)
+        self.decoder = ONNXModel(decoder_path, device=device_norm)
+        self.joint = ONNXModel(joint_path, device=device_norm)
 
         logger.info(f"KairosDecoder initialized on device: {self.device}")
         for inp in self.decoder.session.get_inputs():

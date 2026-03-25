@@ -26,16 +26,9 @@ def _models_available() -> bool:
 
 
 @pytest.fixture(scope="module")
-def asr_cuda():
-    """Фикстура для создания экземпляра KairosASR на CUDA (если доступно)."""
-    try:
-        import torch
-        if not torch.cuda.is_available():
-            pytest.skip("CUDA не доступен на этой системе")
-    except ImportError:
-        pytest.skip("PyTorch не установлен")
-
-    yield KairosASR(device="cuda")
+def asr_auto():
+    """Фикстура для создания экземпляра KairosASR с авто-выбором устройства."""
+    yield KairosASR(device="auto")
 
 
 @contextmanager
@@ -50,14 +43,14 @@ def profile_context():
 @pytest.mark.skipif(not _ffmpeg_available(), reason="ffmpeg требуется для ASR-тестов")
 @pytest.mark.skipif(not _models_available(), reason="Модели не найдены локально; выполните `kairos-asr download`")
 @pytest.mark.integration
-def test_profile_detailed_vad_segmentation(asr_cuda):
+def test_profile_detailed_vad_segmentation(asr_auto):
     """Тест профилирования VAD сегментации"""
     file_path = str(TEST_WAV)
     
-    _ = asr_cuda.transcribe(wav_file=file_path)
+    _ = asr_auto.transcribe(wav_file=file_path)
     
     t1 = time.time()
-    segments, boundaries = asr_cuda.silero_vad.segment_audio_file(file_path, sr=16000)
+    segments, boundaries = asr_auto.silero_vad.segment_audio_file(file_path, sr=16000)
     t2 = time.time()
     
     assert len(segments) > 0, "Должен быть хотя бы один сегмент"
@@ -69,18 +62,18 @@ def test_profile_detailed_vad_segmentation(asr_cuda):
 @pytest.mark.skipif(not _ffmpeg_available(), reason="ffmpeg требуется для ASR-тестов")
 @pytest.mark.skipif(not _models_available(), reason="Модели не найдены локально; выполните `kairos-asr download`")
 @pytest.mark.integration
-def test_profile_detailed_process_segment(asr_cuda):
+def test_profile_detailed_process_segment(asr_auto):
     """Тест профилирования обработки одного сегмента"""
     file_path = str(TEST_WAV)
     
-    _ = asr_cuda.transcribe(wav_file=file_path)
+    _ = asr_auto.transcribe(wav_file=file_path)
     
-    segments, boundaries = asr_cuda.silero_vad.segment_audio_file(file_path, sr=16000)
+    segments, boundaries = asr_auto.silero_vad.segment_audio_file(file_path, sr=16000)
     
     if segments:
         segment = segments[0]
         t1 = time.time()
-        result = asr_cuda._process_segment(segment, offset=0.0)
+        result = asr_auto._process_segment(segment, offset=0.0)
         t2 = time.time()
         
         assert isinstance(result, list), "Результат должен быть списком"
@@ -91,14 +84,14 @@ def test_profile_detailed_process_segment(asr_cuda):
 @pytest.mark.skipif(not _ffmpeg_available(), reason="ffmpeg требуется для ASR-тестов")
 @pytest.mark.skipif(not _models_available(), reason="Модели не найдены локально; выполните `kairos-asr download`")
 @pytest.mark.integration
-def test_profile_detailed_full_transcription(asr_cuda):
+def test_profile_detailed_full_transcription(asr_auto):
     """Тест профилирования полной транскрипции"""
     file_path = str(TEST_WAV)
     
-    _ = asr_cuda.transcribe(wav_file=file_path)
+    _ = asr_auto.transcribe(wav_file=file_path)
     
     t1 = time.time()
-    result = asr_cuda.transcribe(wav_file=file_path)
+    result = asr_auto.transcribe(wav_file=file_path)
     t2 = time.time()
     
     assert result.full_text.strip(), "Текст транскрипции не должен быть пустым"
@@ -110,16 +103,16 @@ def test_profile_detailed_full_transcription(asr_cuda):
 @pytest.mark.skipif(not _ffmpeg_available(), reason="ffmpeg требуется для ASR-тестов")
 @pytest.mark.skipif(not _models_available(), reason="Модели не найдены локально; выполните `kairos-asr download`")
 @pytest.mark.integration
-def test_profile_detailed_multiple_runs(asr_cuda):
+def test_profile_detailed_multiple_runs(asr_auto):
     """Тест профилирования множественных запусков"""
     file_path = str(TEST_WAV)
     
-    _ = asr_cuda.transcribe(wav_file=file_path)
+    _ = asr_auto.transcribe(wav_file=file_path)
     
     times = []
     for i in range(3):
         t1 = time.time()
-        result = asr_cuda.transcribe(wav_file=file_path)
+        result = asr_auto.transcribe(wav_file=file_path)
         t2 = time.time()
         times.append(t2 - t1)
         assert result.full_text.strip(), f"Итерация {i+1}: текст не должен быть пустым"
@@ -135,14 +128,14 @@ def test_profile_detailed_multiple_runs(asr_cuda):
 @pytest.mark.skipif(not _ffmpeg_available(), reason="ffmpeg требуется для ASR-тестов")
 @pytest.mark.skipif(not _models_available(), reason="Модели не найдены локально; выполните `kairos-asr download`")
 @pytest.mark.integration
-def test_profile_performance_cprofile(asr_cuda):
+def test_profile_performance_cprofile(asr_auto):
     """Тест профилирования с cProfile"""
     file_path = str(TEST_WAV)
     
-    _ = asr_cuda.transcribe(wav_file=file_path)
+    _ = asr_auto.transcribe(wav_file=file_path)
     
     with profile_context() as pr:
-        result = asr_cuda.transcribe(wav_file=file_path)
+        result = asr_auto.transcribe(wav_file=file_path)
     
     s = StringIO()
     ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')
@@ -158,14 +151,14 @@ def test_profile_performance_cprofile(asr_cuda):
 @pytest.mark.skipif(not _ffmpeg_available(), reason="ffmpeg требуется для ASR-тестов")
 @pytest.mark.skipif(not _models_available(), reason="Модели не найдены локально; выполните `kairos-asr download`")
 @pytest.mark.integration
-def test_profile_performance_timing(asr_cuda):
+def test_profile_performance_timing(asr_auto):
     """Тест измерения времени выполнения"""
     file_path = str(TEST_WAV)
     
-    _ = asr_cuda.transcribe(wav_file=file_path)
+    _ = asr_auto.transcribe(wav_file=file_path)
     
     t1 = time.time()
-    result = asr_cuda.transcribe(wav_file=file_path)
+    result = asr_auto.transcribe(wav_file=file_path)
     t2 = time.time()
     
     elapsed = t2 - t1
